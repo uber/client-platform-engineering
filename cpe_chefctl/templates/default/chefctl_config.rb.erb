@@ -1,0 +1,9 @@
+<% @config.each do |k, v| -%>
+    <% if v.is_a?(String) %>
+<%= k %> '<%= v.to_s %>'
+    <% elsif v.is_a?(Array) %>
+<%= k %> <%= v.to_s %>
+    <% else %>
+<%= k %> <%= v %>
+    <% end %>
+<% end %>

@@ -1,0 +1,26 @@
+# Managed by chef
+# All manual changes will be overwritten
+
+#################
+# Global Settings
+#################
+
+<% unless @config['global'].nil? %>
+    <% @config['global'].each do |setting, value| -%>
+<%= setting %> <%= value %>
+    <% end -%>
+<% end -%>
+
+
+#################
+# Host Settings
+#################
+
+<% unless @config['host'].nil? %>
+    <% @config['host'].each do |name, conf| -%>
+Host <%= name %>
+        <% conf.each do |k, v| -%>
+   <%= k %> <%= v %>
+        <% end -%>
+    <% end -%>
+<% end -%>

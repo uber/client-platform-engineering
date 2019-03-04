@@ -1,0 +1,13 @@
+# Managed by chef
+# All manual changes will be overwritten
+# To add custom known hosts, use the cpe_ssh cookbook
+
+<% @config.each do |host, conf| -%>
+    <% if conf['cert_authority'] %>
+<%= '@cert-authority' if conf['cert_authority']%> <%= conf['hosts'].join(',') %> <%= conf['type'] %> <%= host %> <%= conf['comment'] %>
+    <% elsif conf['revoked'] %>
+<%= '@revoked' if conf['revoked']%> <%= conf['hosts'].join(',') %> <%= conf['type'] %> <%= host %> <%= conf['comment'] %>
+    <% else %>
+<%= conf['hosts'].join(',') %> <%= conf['type'] %> <%= host %> <%= host %> <%= conf['comment'] %>
+    <% end %>
+<% end -%>
