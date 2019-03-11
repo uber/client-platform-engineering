@@ -1,7 +1,6 @@
 # Dont store any .DS_Store files
 .DS_Store
 ~/*
-/cpe_chefctl/files/default/chefctl.rb
 /cpe_nudge/files/custom/company_logo.png
 /cpe_nudge/files/custom/update_ss.png
 /cpe_umad/files/custom/company_logo.png
