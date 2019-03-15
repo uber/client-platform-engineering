@@ -27,9 +27,9 @@ action_class do # rubocop:disable Metrics/BlockLength
     # Create Sal folder
     if node.windows?
       directory dir do
-        rights :read, 'Everyone'
-        rights :full_control, 'Administrators'
         action :create
+        group root_group
+        owner root_owner
       end
     end
   end
@@ -49,11 +49,11 @@ action_class do # rubocop:disable Metrics/BlockLength
   def macos_install(pkg_info)
     # Install sal_scripts.pkg
     cpe_remote_pkg pkg_info['name'] do
+      checksum pkg_info['checksum']
       pkg_url pkg_info['pkg_url'] if pkg_info['pkg_url']
       pkg_name pkg_info['pkg_name'] if pkg_info['pkg_name']
-      version pkg_info['version']
-      checksum pkg_info['checksum']
       receipt pkg_info['receipt']
+      version pkg_info['version']
     end
   end
 
@@ -71,8 +71,10 @@ action_class do # rubocop:disable Metrics/BlockLength
     gosal_exe = ::File.join(gosal_dir, 'gosal.exe')
     # Save gosal in your pkg repo as: pkgrepo/name/gosal-version.exe
     cpe_remote_file pkg_info['name'] do
-      file_name "#{pkg_info['name']}-#{pkg_info['version']}.exe"
       checksum pkg_info['checksum']
+      file_name "#{pkg_info['name']}-#{pkg_info['version']}.exe"
+      group root_group
+      owner root_owner
       path gosal_exe
     end
   end
@@ -121,8 +123,8 @@ action_class do # rubocop:disable Metrics/BlockLength
     # Make sure the launchds are always loaded if present
     CPE::Sal.launchds.each do |d|
       launchd d do
-        only_if { ::File.exist?("/Library/LaunchDaemons/#{d}.plist") }
         action :enable
+        only_if { ::File.exist?("/Library/LaunchDaemons/#{d}.plist") }
       end
     end
   end
@@ -146,9 +148,9 @@ action_class do # rubocop:disable Metrics/BlockLength
       'url' => sal_prefs['ServerURL'],
     }
     file config_json do
-      rights :read, 'Everyone'
-      rights :full_control, 'Administrators'
       content Chef::JSONCompat.to_json_pretty(sal_json_prefs)
+      group root_group
+      owner root_owner
     end
 
     # Create a scheduled task to run gosal
@@ -184,16 +186,16 @@ action_class do # rubocop:disable Metrics/BlockLength
 
     plugins.each do |name, script|
       directory "#{plugins_dir}/#{name}_chef" do
-        owner 'root'
-        group 'wheel'
+        group root_group
         mode '0755'
+        owner root_owner
       end
 
       cookbook_file "#{plugins_dir}/#{name}_chef/#{script}" do
-        source script
-        owner 'root'
-        group 'wheel'
+        group root_group
         mode '0750'
+        owner root_owner
+        source script
       end
     end
   end
@@ -213,8 +215,8 @@ action_class do # rubocop:disable Metrics/BlockLength
         existing_plugin = plugin.split('_')[0]
         unless plugins.key?(existing_plugin)
           directory "#{plugins_dir}/#{existing_plugin}_chef" do
-            recursive true
             action :delete
+            recursive true
           end
         end
       end
@@ -223,8 +225,8 @@ action_class do # rubocop:disable Metrics/BlockLength
     unless node['cpe_sal']['configure']
       CPE::Sal.launchds.each do |d|
         launchd d do
-          only_if { ::File.exist?("/Library/LaunchDaemons/#{d}.plist") }
           action :disable
+          only_if { ::File.exist?("/Library/LaunchDaemons/#{d}.plist") }
         end
       end
     end
