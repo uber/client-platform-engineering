@@ -11,8 +11,33 @@
 # LICENSE file in the root directory of this source tree.
 #
 
+gosal_dir = value_for_platform_family(
+  'mac_os_x' => 'nil',
+  'debian' => '/var/lib/gosal',
+  'windows' => 'C:\\gosal',
+)
+
 default['cpe_sal'] = {
+  'config' => {
+    'BasicAuth' => nil,
+    'CACert' => nil,
+    'GetGrains' => nil,
+    'GetOhai' => nil,
+    'key' => nil,
+    'management' => nil,
+    'NameType' => nil,
+    'OhaiClientConfigPath' => nil,
+    'ServerURL' => nil,
+    'SkipFacts' => nil,
+    'SSLClientCertificate' => nil,
+    'SSLClientKey' => nil,
+    'SyncScripts' => nil,
+  },
+  'configure' => false,
+  'gosal_dir' => gosal_dir,
   'install' => false,
+  'manage_plugins' => false,
+  'plugins' => {},
   'scripts_pkg' => {
     'name' => nil,
     'version' => nil,
@@ -20,21 +45,8 @@ default['cpe_sal'] = {
     'receipt' => nil,
     'url' => nil,
   },
-  'configure' => false,
-  'config' => {
-    'ServerURL' => nil,
-    'key' => nil,
-    'BasicAuth' => nil,
-    'SyncScripts' => nil,
-    'SkipFacts' => nil,
-    'GetGrains' => nil,
-    'GetOhai' => nil,
-    'OhaiClientConfigPath' => nil,
-    'CACert' => nil,
-    'SSLClientCertificate' => nil,
-    'SSLClientKey' => nil,
-    'NameType' => nil,
+  'task' => {
+    'minutes_per_run' => 30,
+    'seconds_random_delay' => '1200', # must be a string
   },
-  'manage_plugins' => false,
-  'plugins' => {},
 }

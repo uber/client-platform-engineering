@@ -13,12 +13,14 @@ The cookbooks are offered by Facebook in the [IT-CPE](https://github.com/faceboo
 Attributes
 ----------
 * node['cpe_sal']
-* node['cpe_sal']['install']
-* node['cpe_sal']['scripts_pkg']
-* node['cpe_sal']['configure']
 * node['cpe_sal']['config']
+* node['cpe_sal']['configure']
+* node['cpe_sal']['gosal_dir']
+* node['cpe_sal']['install']
 * node['cpe_sal']['manage_plugins']
 * node['cpe_sal']['plugins']
+* node['cpe_sal']['scripts_pkg']
+* node['cpe_sal']['task']
 
 Notes
 -----
@@ -58,3 +60,17 @@ For example, a sane default configuration would be:
     node.default['cpe_sal']['plugins'] =
       'Myplugin' => 'myplugin.py',
     }
+
+   # Windows
+   node.default['cpe_sal']['gosal_dir'] = 'C:\\ProgramData\\sal'
+   node.default['cpe_sal']['scripts_pkg'] = {
+     'name' => 'gosal',
+     'checksum' =>
+       '38001bdffda77cb73899c235ec82cb20dee0fef9890bc94c35a742dc7849c6b9',
+     'version' => '1.0',
+   }
+   node.default['cpe_sal']['config']['management'] = {
+     'tool' => 'chef',
+     'path' => 'C:\\opscode\\chef\\bin\\ohai.bat',
+     'command' => '',
+   }
