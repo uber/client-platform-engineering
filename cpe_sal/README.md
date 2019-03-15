@@ -7,6 +7,7 @@ This cookbook depends on the following cookbooks
 * cpe_launchd
 * cpe_profiles
 * cpe_remote
+* cpe_utils
 
 The cookbooks are offered by Facebook in the [IT-CPE](https://github.com/facebook/IT-CPE) repository.
 
