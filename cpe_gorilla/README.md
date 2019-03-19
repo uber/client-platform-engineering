@@ -5,6 +5,23 @@ Configures and installs gorilla
 Requirements
 ------------
 * Windows
+* [Gorilla](https://github.com/1dustindavis/gorilla)
+
+This cookbook depends on the following cookbooks
+
+* cpe_remote
+* cpe_utils
+
+The cookbooks are offered by Facebook in the [IT-CPE](https://github.com/facebook/IT-CPE) repository.
+
+Notes
+------------
+Gorilla is a tool for installing windows packages, similar to [Munki](https://github.com/munki/munki).
+
+This cookbook assumes that you are installing the executable (.exe) version of Gorilla, not the MSI (.msi) version.
+
+You can find executable releases of Gorilla [here](https://github.com/1dustindavis/gorilla/releases)
+
 
 Attributes
 ----------
