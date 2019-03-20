@@ -52,7 +52,7 @@ action_class do
     end
 
     conf = node['cpe_chefctl']['config']['chefctl'].reject { |_k, v| v.nil? }
-    return if conf.empty? && conf.empty?
+    return if conf.empty? || conf.nil?
 
     # ToDo - Make this cross platform
     config_path = CPE::Chefctl.config(
