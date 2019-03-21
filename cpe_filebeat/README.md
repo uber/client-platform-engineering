@@ -42,27 +42,29 @@ By default, this cookbook will not install Filebeat or its preferences. You may 
 
 A config for shipping munki logs might look like this:
 
-    node.default['cpe_filebeat']['install'] = true
-    node.default['cpe_filebeat']['configure'] = true
-    node.default['cpe_filebeat']['config'] = {
-      'output.logstash' =>
-        {
-          'hosts' => ['lsfosq_us1.uberinternal.com:5166'],
-          # ToD this needs to be made cross platform
-          'ssl.certificate_authorities' => [
-            '/opt/filebeat/filebeat-prod.crt',
-          ],
-        },
-      'filebeat.inputs' => [
-        {
-          'type' => 'log',
-          'enabled' => true,
-          'fields' => {
-            'type' => 'my-munki-index',
-          },
-          'paths' => ['/Library/Managed Installs/Logs/*.log'],
-          'encoding' => 'utf-8',
-          'fields_under_root' => false,
-        },
+```ruby
+node.default['cpe_filebeat']['install'] = true
+node.default['cpe_filebeat']['configure'] = true
+node.default['cpe_filebeat']['config'] = {
+  'output.logstash' =>
+    {
+      'hosts' => ['lsfosq_us1.uberinternal.com:5166'],
+      # ToD this needs to be made cross platform
+      'ssl.certificate_authorities' => [
+        '/opt/filebeat/filebeat-prod.crt',
+      ],
+    },
+  'filebeat.inputs' => [
+    {
+      'type' => 'log',
+      'enabled' => true,
+      'fields' => {
+        'type' => 'my-munki-index',
+      },
+      'paths' => ['/Library/Managed Installs/Logs/*.log'],
+      'encoding' => 'utf-8',
+      'fields_under_root' => false,
+    },
+```
 
 Note: The Filebeat config format is nesty and can be confusing, so be *absolutely* sure you have the format correct, otherwise the yaml will be wrong.

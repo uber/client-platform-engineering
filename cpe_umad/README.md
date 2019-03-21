@@ -42,6 +42,7 @@ If you set `node.default['cpe_umad']['custom_resources'] = true` you will need a
 
 For example, you could tweak the below values:
 
+```ruby
 node.default['cpe_umad']['install'] = true
 node.default['cpe_umad']['custom_resources'] = true
 node.default['cpe_umad']['manage_agents'] = true
@@ -104,3 +105,4 @@ node.default['cpe_umad']['la'] = {
   ],
   'type' => 'agent',
 }
+```

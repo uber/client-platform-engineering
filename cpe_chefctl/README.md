@@ -7,7 +7,7 @@ Used to configure [chefctl](https://github.com/facebook/chef-utils/tree/master/c
 
 Attributes
 ----------
-```
+```ruby
 node['cpe_chefctl']
 node['cpe_chefctl']['configure'] # Bool
 node['cpe_chefctl']['remove'] # Bool
