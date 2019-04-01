@@ -37,6 +37,7 @@ If you set `node.default['cpe_nudge']['custom_resources'] = true` you will need 
 
 For example, you could tweak the below values:
 
+```ruby
 node.default['cpe_nudge']['install'] = true
 node.default['cpe_nudge']['custom_resources'] = true
 node.default['cpe_nudge']['manage_la'] = true
@@ -98,3 +99,4 @@ node.default['cpe_nudge']['json_prefs'] = {
   'software_updates' => [],
 }
 node.default['cpe_nudge']['manage_json'] = true
+```
