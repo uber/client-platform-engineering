@@ -49,10 +49,6 @@ node.default['cpe_filebeat']['config'] = {
   'output.logstash' =>
     {
       'hosts' => ['server.company.com:1234'],
-      # ToD this needs to be made cross platform
-      'ssl.certificate_authorities' => [
-        '/opt/filebeat/filebeat-prod.crt',
-      ],
     },
   'filebeat.inputs' => [
     {
