@@ -10,5 +10,6 @@ Opensource Projects
 * [Crypt](https://github.com/grahamgilbert/crypt)
 * [Crypt-Server](https://github.com/grahamgilbert/Crypt-Server)
 * [Sal](https://github.com/salopensource/sal)
+* [Gosal](https://github.com/airbnb/gosal)
 * [Nudge](https://github.com/erikng/nudge)
 * [UMAD](https://github.com/erikng/umad)
