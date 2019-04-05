@@ -13,6 +13,7 @@ Attributes
 * node['cpe_hostname']
 * node['cpe_hostname']['enforce']
 * node['cpe_hostname']['hostname']
+* node['cpe_hostname']['windows_reboot']
 
 Usage
 -----
