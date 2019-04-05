@@ -24,6 +24,10 @@ action_class do
     shell_out("/usr/sbin/scutil --get #{type}").stdout.to_s.chomp
   end
 
+  def check_hostname_windows
+    shell_out('c:\\Windows\\System32\\HOSTNAME.exe').stdout.to_s.chomp
+  end
+
   def enforce?
     node['cpe_hostname']['enforce']
   end
@@ -66,7 +70,11 @@ action_class do
         end
       end
     elsif node.windows?
-      # TODO: write windows portion
+      hostname 'Resetting hostname' do
+        hostname node['cpe_hostname']['hostname']
+        windows_reboot node['cpe_hostname']['windows_reboot']
+        only_if { check_hostname_windows != node['cpe_hostname']['hostname'] }
+      end
       return
     elsif node.ubuntu?
       # TODO: write ubuntu portion
