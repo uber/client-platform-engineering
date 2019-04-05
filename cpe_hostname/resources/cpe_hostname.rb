@@ -71,9 +71,9 @@ action_class do
       end
     elsif node.windows?
       hostname 'Resetting hostname' do
-        hostname node['cpe_hostname']['hostname']
+        hostname hostname
         windows_reboot node['cpe_hostname']['windows_reboot']
-        only_if { check_hostname_windows != node['cpe_hostname']['hostname'] }
+        only_if { check_hostname_windows != hostname }
       end
       return
     elsif node.ubuntu?
