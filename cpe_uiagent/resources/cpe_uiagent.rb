@@ -43,7 +43,7 @@ action :run do
       'PayloadEnabled' => true,
       'PayloadDisplayName' => 'CoreServices UI Agent',
     )
-    uiagent_prefs.keys.each do |key|
+    uiagent_prefs.each_key do |key|
       next if uiagent_prefs[key].nil?
       uiagent_profile['PayloadContent'][0][key] = uiagent_prefs[key]
     end
