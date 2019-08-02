@@ -1,0 +1,5 @@
+$random_number = (Get-Random -Minimum 1 -Maximum <%= node['cpe_gorilla']['task']['seconds_random_delay'] %>)
+
+Start-Sleep -Seconds $random_number
+
+& C:\ProgramData\gorilla\bin\gorilla.exe
