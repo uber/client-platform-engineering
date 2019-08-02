@@ -153,19 +153,22 @@ action_class do # rubocop:disable Metrics/BlockLength
       owner root_owner
     end
 
-    # Create a scheduled task to run gosal
-    gosal_exe = ::File.join(gosal_dir, 'gosal.exe')
+    # Create a scheduled task to run gosal / use template for splay and stop
+    # relying on Chef's built in portions for this as it's buggy.
+    gosal_ps1 = ::File.join(gosal_dir, 'gosal_task_splay.ps1')
+
+    template 'gosal splay powershell script' do
+      path gosal_ps1
+      source 'gosal_task_splay.erb'
+    end
+
+    ps_cmd = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe ' \
+      "-NoProfile -ExecutionPolicy Bypass \"#{gosal_ps1}\""
+
     windows_task node['cpe_sal']['scripts_pkg']['name'] do
-      command "#{gosal_exe} --config #{config_json}"
+      command ps_cmd
       frequency :minute
       frequency_modifier node['cpe_sal']['task']['minutes_per_run']
-      if Chef::Version.new(Chef::VERSION).major >= 14
-        random_delay node['cpe_sal']['task']['seconds_random_delay'] \
-        unless node['cpe_sal']['task']['seconds_random_delay'].nil?
-      else
-        Chef::Log.warn('windows_task is not idempotent with random_delay in '\
-          'earlier chef versions.')
-      end
       run_level :highest
     end
   end
