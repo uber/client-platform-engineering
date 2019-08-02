@@ -70,6 +70,13 @@ action_class do
       action :create
     end
 
+    gorilla_ps1 = ::File.join(bin_dir, 'gorilla_task_splay.ps1')
+
+    template 'gorilla scheduled task ps1' do
+      path gorilla_ps1
+      source 'gorilla_task_splay.erb'
+    end
+
     # Download and install the executable
     gorilla_exe = ::File.join(bin_dir, 'gorilla.exe')
 
@@ -81,16 +88,14 @@ action_class do
       path gorilla_exe
     end
 
+    runline = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe ' \
+      "-NoProfile -ExecutionPolicy Bypass \"#{gorilla_ps1}\""
+
     # Create a scheduled task to run Gorilla
     windows_task node['cpe_gorilla']['exe']['name'] do
-      command gorilla_exe
+      command runline
       frequency :minute
       frequency_modifier node['cpe_gorilla']['task']['minutes_per_run']
-      if Chef::Version.new(Chef::VERSION).major >= 14
-        random_delay node['cpe_gorilla']['task']['seconds_random_delay'] unless node['cpe_gorilla']['task']['seconds_random_delay'].nil? # rubocop:disable Metrics/LineLength
-      else
-        Chef::Log.warn('windows_task is not idempotent with random_delay in earlier chef versions.') # rubocop:disable Metrics/LineLength
-      end
       run_level :highest
     end
   end
