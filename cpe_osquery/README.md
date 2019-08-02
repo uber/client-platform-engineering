@@ -9,6 +9,8 @@ This cookbook depends on the following cookbooks
 
 These cookbooks are offered by Facebook in the [IT-CPE](https://github.com/facebook/IT-CPE) repository.
 
+Note: You *must* have Chocolatey installed on Windows before running this cookbook. It does not need to be configured or have a server, it only needs to be present.
+
 Attributes
 ----------
 * node['cpe_osquery']
