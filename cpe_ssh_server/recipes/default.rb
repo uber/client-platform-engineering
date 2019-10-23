@@ -1,5 +1,5 @@
 #
-# Cookbook Name:: cpe_filebeat
+# Cookbook Name:: cpe_ssh_server
 # Recipes:: default
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
@@ -11,4 +11,6 @@
 # LICENSE file in the root directory of this source tree.
 #
 
-cpe_filebeat 'Install and Configure Filebeat'
+return unless node.macos?
+
+cpe_ssh_server 'Configure SSH server'

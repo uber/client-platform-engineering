@@ -61,8 +61,8 @@ action_class do
     # Update our json file (if needed) with the new contents of our items
     file json_path do
       mode '0644'
-      owner 'root'
-      group 'wheel'
+      owner root_owner
+      group root_group
       action :create
       content Chef::JSONCompat.to_json_pretty(items_to_manage)
     end

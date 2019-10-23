@@ -41,18 +41,15 @@ action_class do # rubocop:disable Metrics/BlockLength
     falcon_agent_prefs = node['cpe_crowdstrike_falcon_sensor']['agent'].to_hash
     falcon_pkg_prefs = node['cpe_crowdstrike_falcon_sensor']['pkg'].to_hash
 
-    # Loop through all the keys and bail/warn if any are missing that are
-    # required per OS
+    # Loop through all the keys and bail/warn if any are missing that are required per OS
     run_install_logic = true
     [falcon_agent_prefs, falcon_pkg_prefs].each do |hash|
       # Grab the keys and check if they are empty strings or nils
       hash.keys.each do |preference|
         if hash[preference].to_s.empty? || hash[preference].nil?
           # Warn and print out the bad key/value pairs
-          Chef::Log.warn('cpe_crowdstrike_falcon_sensor incorrectly ' \
-            'configured. Skipping install')
-          Chef::Log.warn('cpe_crowdstrike_falcon_sensor preference - ' \
-            "#{preference}")
+          Chef::Log.warn('cpe_crowdstrike_falcon_sensor incorrectly configured. Skipping install')
+          Chef::Log.warn("cpe_crowdstrike_falcon_sensor preference - #{preference}")
           # Force a safe return so chef doesn't hard crash
           run_install_logic = false
         end
@@ -73,8 +70,7 @@ action_class do # rubocop:disable Metrics/BlockLength
   end
 
   def debian_install(falconctl_path, cid, reg_token)
-    # https://falcon.crowdstrike.com/support/documentation/20/falcon-sensor-
-    # for-linux-deployment-guide
+    # https://falcon.crowdstrike.com/support/documentation/20/falcon-sensor-for-linux-deployment-guide
     file_name = "#{node['cpe_crowdstrike_falcon_sensor']['pkg']['app_name']}-"\
       "#{node['cpe_crowdstrike_falcon_sensor']['pkg']['version']}.deb"
     deb_path = ::File.join(Chef::Config[:file_cache_path], file_name)
@@ -104,17 +100,16 @@ action_class do # rubocop:disable Metrics/BlockLength
   end
 
   def macos_install(falconctl_path, receipt, reg_token)
-    # https://falcon.crowdstrike.com/support/documentation/22/falcon-sensor-
-    # for-mac-deployment-guide
+    # https://falcon.crowdstrike.com/support/documentation/22/falcon-sensor-for-mac-deployment-guide
     # Install the package
     cpe_remote_pkg 'Crowdstrike Falcon' do
+      allow_downgrade node['cpe_crowdstrike_falcon_sensor']['pkg']['allow_downgrade']
       app node['cpe_crowdstrike_falcon_sensor']['pkg']['app_name']
       version node['cpe_crowdstrike_falcon_sensor']['pkg']['version']
       checksum node['cpe_crowdstrike_falcon_sensor']['pkg']['checksum']
       receipt receipt
     end
-    # Enroll device into server with registration token, unless it's connecting
-    # or connected as the status.
+    # Enroll device into server with registration token, unless it's connecting or connected as the status.
     allowed_responses = [
       'connecting',
       'connected',
@@ -132,16 +127,16 @@ action_class do # rubocop:disable Metrics/BlockLength
     execute 'Setting Crowdstrike Falcon registration token' do
       command "#{falconctl_path} license #{reg_token}"
       only_if { ::File.exists?(falconctl_path) }
-      not_if { allowed_responses.include?(check_falconctl_registration(falconctl_path)) } # rubocop:disable Metrics/LineLength
+      # TODO - Change this guard to re-arm machine if it hasn't checked in in a few days.
+      # not_if { allowed_responses.include?(check_falconctl_registration(falconctl_path)) }
+      not_if { ::File.exists?('/Library/CS/License.bin') }
     end
   end
 
   def windows_install(reg_token)
-    # https://falcon.crowdstrike.com/support/documentation/23/falcon-sensor-
-    # for-windows-deployment-guide
+    # https://falcon.crowdstrike.com/support/documentation/23/falcon-sensor-for-windows-deployment-guide
     version = node['cpe_crowdstrike_falcon_sensor']['pkg']['version']
-    file_name = "#{node['cpe_crowdstrike_falcon_sensor']['pkg']['app_name']}-"\
-      "#{version}.exe"
+    file_name = "#{node['cpe_crowdstrike_falcon_sensor']['pkg']['app_name']}-#{version}.exe"
     exe_path = ::File.join(Chef::Config[:file_cache_path], file_name)
     cpe_remote_file node['cpe_crowdstrike_falcon_sensor']['pkg']['app_name'] do
       backup 1
@@ -152,14 +147,11 @@ action_class do # rubocop:disable Metrics/BlockLength
     end
     # Install the package and enroll with registration token
     execute 'Install Crowdstrike Falcon Windows' do
-      # ProvNoWait=1 means it doesn't wait until it can communicate to CS
-      # servers to install itself.
-      command "#{exe_path} /install /quiet /norestart ProvNoWait=1 "\
-      "CID=#{reg_token}"
+      # ProvNoWait=1 means it doesn't wait until it can communicate to CS servers to install itself.
+      command "#{exe_path} /install /quiet /norestart ProvNoWait=1 CID=#{reg_token}"
       only_if { ::File.exists?(exe_path) }
-      # There technically isn't a falconctl on Windows, so you have to use
-      # sc and see if the process is running - if it is, the device is in a good
-      # state
+      # There technically isn't a falconctl on Windows, so you have to use sc and see if the process is running - if it
+      # is, the device is in a good state
       not_if do
         check_falcon_agent_status_windows.include?('RUNNING')
       end
@@ -206,8 +198,7 @@ action_class do # rubocop:disable Metrics/BlockLength
     falcon_agent_prefs = node['cpe_crowdstrike_falcon_sensor']['agent']
     falcon_pkg_prefs = node['cpe_crowdstrike_falcon_sensor']['pkg']
 
-    # Loop through all the keys and bail/warn if any are missing that are
-    # required per OS
+    # Loop through all the keys and bail/warn if any are missing that are required per OS
     run_uninstall_logic = true
     check_hash = {}
     if node.macos?
@@ -221,10 +212,8 @@ action_class do # rubocop:disable Metrics/BlockLength
     check_hash.keys.each do |preference|
       if check_hash[preference].to_s.empty? || check_hash[preference].nil?
         # Warn and print out the bad key/value pairs
-        Chef::Log.warn('cpe_crowdstrike_falcon_sensor incorrectly ' \
-          'configured. Skipping uninstall')
-        Chef::Log.warn('cpe_crowdstrike_falcon_sensor preference - ' \
-          "#{preference}")
+        Chef::Log.warn('cpe_crowdstrike_falcon_sensor incorrectly configured. Skipping uninstall')
+        Chef::Log.warn("cpe_crowdstrike_falcon_sensor preference - #{preference}")
         # Force a safe return so chef doesn't hard crash
         run_uninstall_logic = false
       end
@@ -238,8 +227,7 @@ action_class do # rubocop:disable Metrics/BlockLength
   end
 
   def debian_uninstall
-    # https://falcon.crowdstrike.com/support/documentation/20/falcon-sensor-
-    # for-linux-deployment-guide
+    # https://falcon.crowdstrike.com/support/documentation/20/falcon-sensor-for-linux-deployment-guide
     dpkg_package 'falcon-sensor' do
       action :purge
     end
@@ -254,10 +242,8 @@ action_class do # rubocop:disable Metrics/BlockLength
   end
 
   def windows_uninstall
-    # https://falcon.crowdstrike.com/support/documentation/23/falcon-sensor-
-    # for-windows-deployment-guide
-    file_name = "#{node['cpe_crowdstrike_falcon_sensor']['pkg']['app_name']}_"\
-      'uninstaller-'\
+    # https://falcon.crowdstrike.com/support/documentation/23/falcon-sensor-for-windows-deployment-guide
+    file_name = "#{node['cpe_crowdstrike_falcon_sensor']['pkg']['app_name']}_uninstaller-"\
       "#{node['cpe_crowdstrike_falcon_sensor']['pkg']['uninstall_version']}.exe"
     exe_path = ::File.join(Chef::Config[:file_cache_path], file_name)
     un_hash = node['cpe_crowdstrike_falcon_sensor']['pkg']['uninstall_checksum']
@@ -280,9 +266,7 @@ action_class do # rubocop:disable Metrics/BlockLength
   def kernel_extension_running
     status = false
     if node.macos?
-      cmd = shell_out(
-        '/usr/sbin/kextstat -b com.crowdstrike.sensor',
-      ).stdout.to_s
+      cmd = shell_out('/usr/sbin/kextstat -b com.crowdstrike.sensor').stdout.to_s
       if cmd.nil? || cmd.empty?
         return status
       else
@@ -335,7 +319,8 @@ action_class do # rubocop:disable Metrics/BlockLength
   def get_falcon_agent_version_windows
     # Blank strings for our comparisons vs nil because of our guards.
     status = '0'
-    cmd = powershell_out('(Get-Item ${Env:ProgramFiles}\CrowdStrike\CSFalconContainer.exe).VersionInfo.FileVersion').stdout.to_s # rubocop:disable Metrics/LineLength
+    powershell_cmd = '(Get-Item ${Env:ProgramFiles}\CrowdStrike\CSFalconContainer.exe).VersionInfo.FileVersion'
+    cmd = powershell_out(powershell_cmd).stdout.to_s
     if cmd.nil? || cmd.empty?
       return status
     else

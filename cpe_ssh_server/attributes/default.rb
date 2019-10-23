@@ -1,6 +1,6 @@
 #
-# Cookbook Name:: cpe_filebeat
-# Recipes:: default
+# Cookbook Name:: cpe_ssh_server
+# Attributes:: default
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 #
@@ -11,4 +11,7 @@
 # LICENSE file in the root directory of this source tree.
 #
 
-cpe_filebeat 'Install and Configure Filebeat'
+default['cpe_ssh_server'] = {
+  'enable' => false,
+  'manage' => false,
+}

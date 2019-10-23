@@ -18,10 +18,13 @@ Usage
 -----
 A config for setting the hostname to username-serial:
 
-```ruby
-node.default['cpe_hostname']['enforce'] = true
-if node.macos?
-  node.default['cpe_hostname']['hostname'] =
-    "#{node.console_user}-#{node.serial}"
-end
-```
+    node.default['cpe_hostname']['enforce'] = true
+    if node.macos?
+      node.default['cpe_hostname']['hostname'] =
+        "#{node.console_user}-#{node.serial}"
+    end
+
+    # Fix for slow ohai in VMs
+    if node.virtual?
+      node.default['cpe_hostname']['suffix'] = 'vm'
+    end
