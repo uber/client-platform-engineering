@@ -18,7 +18,8 @@ default['cpe_crowdstrike_falcon_sensor'] = {
   'install' => false,
   'manage' => false,
   'pkg' => {
-    'app_name' => 'nil',
+    'allow_downgrade' => true,
+    'app_name' => nil,
     'checksum' => nil,
     'version' => nil,
   },

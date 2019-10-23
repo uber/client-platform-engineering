@@ -41,7 +41,7 @@ action_class do # rubocop:disable Metrics/BlockLength
       'windows' => "filebeat-#{zip_info['version']}-windows-x86_64.zip",
       'default' => nil,
     )
-    filebeat_dir = CPE::Filebeat.getpath(node['cpe_filebeat']['installdir'])
+    filebeat_dir = node['cpe_filebeat']['dir']
     directory filebeat_dir do
       recursive true
       owner root_owner
@@ -51,35 +51,33 @@ action_class do # rubocop:disable Metrics/BlockLength
       zip_name zip_name
       zip_checksum zip_info['checksum']
       folder_name 'filebeat'
-      mode '0755'
       extract_location filebeat_dir
     end
   end
 
   def configure
     # Get info about filebeat config, rejecting unset values
-    filebeat_conf = node['cpe_filebeat']['config'].to_h.reject { |_k, v| v.nil? } # rubocop:disable Metrics/LineLength
+    filebeat_conf = node['cpe_filebeat']['config'].to_h.reject { |_k, v| v.nil? }
     if filebeat_conf.empty? || filebeat_conf.nil?
       Chef::Log.warn('config is not populated, skipping configuration')
       return
     end
 
-    config_dir = CPE::Filebeat.getpath(node['cpe_filebeat']['datadir'])
-    directory config_dir do
+    filebeat_dir = node['cpe_filebeat']['dir']
+    directory filebeat_dir do
       recursive true
       owner root_owner
       group root_group
     end
 
-    windows_service if node.windows?
-    macos_service if node.macos?
-    debian_service if node.debian_family?
+    setup_macos_service if node.macos?
+    setup_debian_service if node.debian_family?
 
     prefix = node['cpe_launchd']['prefix'] || 'com.uber.chef'
     service_info = value_for_platform_family(
       'mac_os_x' => { 'launchd' => "#{prefix}.filebeat" },
       'debian' => { 'systemd_unit' => 'filebeat.service' },
-      'windows' => { 'windows_service' => 'filebeat' },
+      'windows' => { 'windows_service' => 'Filebeat Service' },
       'default' => nil,
     )
     service_type, service_name = service_info.first
@@ -93,35 +91,34 @@ action_class do # rubocop:disable Metrics/BlockLength
         subscribes :restart, 'cpe_remote_zip[filebeat_zip]'
       end
     end
-    config = ::File.join(config_dir, 'filebeat.chef.yml')
+    config = ::File.join(filebeat_dir, 'filebeat.chef.yml')
     file config do
       owner root_owner
       group root_group
       content filebeat_conf.to_yaml
       notifies :restart, "#{service_type}[#{service_name}]"
     end
+    # Because windows services are annoying and start immediately, so this
+    # must come after the config is placed
+    setup_windows_service if node.windows?
   end
 
-  # ToDo This isn't working correctly and I'm not certain why
-  def windows_service
-    install_dir = CPE::Filebeat.getpath(node['cpe_filebeat']['installdir'])
-    data_dir = CPE::Filebeat.getpath(node['cpe_filebeat']['datadir'])
-    exe_path = ::File.join(install_dir, 'filebeat.exe')
+  def setup_windows_service
+    filebeat_dir = node['cpe_filebeat']['dir']
+    exe_path = ::File.join(filebeat_dir, 'filebeat.exe')
     bin_path = "#{exe_path}" \
-    " -c #{install_dir}\\filebeat.chef.yml" \
-    " -path.home #{install_dir}" \
-    " -path.data #{data_dir}" \
-    " -path.logs #{data_dir}\\logs"
-    windows_service 'Filebeat service' do
+      " -c #{filebeat_dir}\\filebeat.chef.yml"
+    windows_service 'Filebeat Service' do
       action %i[create start]
-      display_name 'Filebeat'
-      service_name 'filebeat'
       binary_path_name bin_path
+      startup_type :automatic
+      delayed_start true
+      description 'Filebeat sends log files to Logstash or directly to Elasticsearch.'
     end
   end
 
-  def debian_service
-    install_dir = CPE::Filebeat.getpath(node['cpe_filebeat']['installdir'])
+  def setup_debian_service
+    filebeat_dir = node['cpe_filebeat']['dir']
     unit = {
       'Unit' => {
         'Description' =>
@@ -132,10 +129,8 @@ action_class do # rubocop:disable Metrics/BlockLength
       },
       'Service' => {
         'Type' => 'simple',
-        'ExecStart' => "#{install_dir}/filebeat" \
-        " -c #{install_dir}/filebeat.chef.yml" \
-        " -path.home #{install_dir}" \
-        " -path.data #{install_dir}/data" \
+        'ExecStart' => "#{filebeat_dir}/filebeat" \
+        " -c #{filebeat_dir}/filebeat.chef.yml" \
         ' -path.logs /var/log/filebeat',
         'Restart' => 'always',
       },
@@ -150,13 +145,13 @@ action_class do # rubocop:disable Metrics/BlockLength
     end
   end
 
-  def macos_service
-    install_dir = CPE::Filebeat.getpath(node['cpe_filebeat']['installdir'])
+  def setup_macos_service
+    filebeat_dir = node['cpe_filebeat']['dir']
     ld = {
       'program_arguments' => [
-        "#{install_dir}/filebeat",
+        "#{filebeat_dir}/filebeat",
         '-c',
-        "#{install_dir}/filebeat.chef.yml",
+        "#{filebeat_dir}/filebeat.chef.yml",
       ],
       'disabled' => false,
       'run_at_load' => true,
@@ -167,10 +162,8 @@ action_class do # rubocop:disable Metrics/BlockLength
   end
 
   def cleanup_windows
-    windows_service 'Filebeat service' do
+    windows_service 'Filebeat Service' do
       action %i[stop delete]
-      display_name 'Filebeat'
-      service_name 'filebeat'
     end
   end
 
@@ -181,20 +174,13 @@ action_class do # rubocop:disable Metrics/BlockLength
   end
 
   def cleanup
-    install_dir = CPE::Filebeat.getpath(node['cpe_filebeat']['installdir'])
-    data_dir = CPE::Filebeat.getpath(node['cpe_filebeat']['datadir'])
-
     cleanup_debian if node.debian_family?
     cleanup_windows if node.windows?
 
-    directory install_dir do
+    directory node['cpe_filebeat']['dir'] do
       action :delete
       recursive true
-    end
-    directory data_dir do
-      action :delete
-      recursive true
-      only_if { node.windows? }
+      ignore_failure true if node.windows?
     end
   end
 end

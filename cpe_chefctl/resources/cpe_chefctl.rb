@@ -40,6 +40,12 @@ action_class do
       mode '0755'
     end
 
+    lock_dir = ::File.dirname(
+      node['cpe_chefctl']['config']['chefctl']['lock_file'],
+    )
+    directory lock_dir do
+      recursive true
+    end
     # Only symlink chefctl on macOS and linux
     unless node.windows?
       chefctl_symlink = ::File.join(

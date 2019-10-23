@@ -1,6 +1,6 @@
 #
-# Cookbook Name:: cpe_chefctl
-# Libraries:: cpe_filebeat
+# Cookbook Name:: cpe_ssh_server
+# Recipes:: default
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 #
@@ -11,10 +11,6 @@
 # LICENSE file in the root directory of this source tree.
 #
 
-module CPE
-  class Filebeat
-    def self.getpath(basedir)
-      ::File.join(basedir, 'filebeat')
-    end
-  end
-end
+return unless node.macos?
+
+cpe_ssh_server 'Configure SSH server'

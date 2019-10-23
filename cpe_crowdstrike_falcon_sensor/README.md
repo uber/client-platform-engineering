@@ -21,6 +21,7 @@ Attributes
 * node['cpe_crowdstrike_falcon_sensor']['install']
 * node['cpe_crowdstrike_falcon_sensor']['manage']
 * node['cpe_crowdstrike_falcon_sensor']['pkg']
+* node['cpe_crowdstrike_falcon_sensor']['pkg']['allow_downgrade']
 * node['cpe_crowdstrike_falcon_sensor']['pkg']['app_name']
 * node['cpe_crowdstrike_falcon_sensor']['pkg']['checksum']
 * node['cpe_crowdstrike_falcon_sensor']['pkg']['mac_osx_pkg_receipt']
@@ -74,4 +75,10 @@ elsif node.windows?
     node.default['cpe_crowdstrike_falcon_sensor']['pkg'][k] = v
   end
 end
+```
+
+If you need the ability to test newer versions of CrowdStrike out-of-band:
+```
+node.default['cpe_crowdstrike_falcon_sensor']['pkg']['allow_downgrade'] =
+  false
 ```
