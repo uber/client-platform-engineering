@@ -111,11 +111,15 @@ Performance/RedundantMerge:
 Style/ConditionalAssignment:
   Enabled: false
 
+# No more 'Missing frozen string literal comment.' linting violations
+Style/FrozenStringLiteralComment:
+  Enabled: false
+
 #
 # Modified rules
 #
 LineLength:
-  Max: 80
+  Max: 120
 
 DotPosition:
   EnforcedStyle: trailing
