@@ -91,20 +91,8 @@ PerceivedComplexity:
 MultilineOperationIndentation:
   Enabled: false
 
-# buggy: https://github.com/bbatsov/rubocop/issues/2639
-Performance/RedundantMatch:
-  Enabled: false
-
 # We don't use CAPS just for constants.
 Style/MutableConstant:
-  Enabled: false
-
-# We'll .times.map all we want.
-Performance/TimesMap:
-  Enabled: false
-
-# https://github.com/bbatsov/rubocop/issues/2676
-Performance/RedundantMerge:
   Enabled: false
 
 # Bug with constants? https://phabricator.fb.com/P56108678
@@ -139,7 +127,7 @@ TrailingCommaInHashLiteral:
 TrailingCommaInArguments:
   EnforcedStyleForMultiline: comma
 
-Layout/IndentArray:
+Layout/IndentFirstArrayElement:
   EnforcedStyle: consistent
 
 Style/SignalException:

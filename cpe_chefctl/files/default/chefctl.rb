@@ -2,7 +2,7 @@
 
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 
-# Copyright 2013-present Facebook
+# Copyright:: 2013-present Facebook
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,7 +31,6 @@ require 'rubygems'
 
 # We use comments on end blocks to tell what that end statement is ending
 # for sanity sake. This rubocop rule doesn't like this style.
-# rubocop:disable Style/CommentedKeyword
 
 def quit(message, exitcode = 1)
   Chefctl.logger.error(message)

@@ -1,10 +1,10 @@
 #
-# Cookbook Name:: cpe_sal
+# Cookbook:: cpe_sal
 # Resources:: cpe_sal
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 #
-# Copyright (c) 2019-present, Uber Technologies, Inc.
+# Copyright:: (c) 2019-present, Uber Technologies, Inc.
 # All rights reserved.
 #
 # This source code is licensed under the Apache 2.0 license found in the
@@ -22,7 +22,7 @@ action :manage do
   cleanup
 end
 
-action_class do # rubocop:disable Metrics/BlockLength
+action_class do
   def create_sal_folder(dir)
     # Create Sal folder
     if node.windows?
@@ -94,7 +94,7 @@ action_class do # rubocop:disable Metrics/BlockLength
   def macos_configure(sal_prefs)
     # Build configuration profile and pass it to cpe_profiles
     prefix = node['cpe_profiles']['prefix']
-    organization = node['organization'] ? node['organization'] : 'Uber' # rubocop:disable  Style/UnneededCondition, Metrics/LineLength
+    organization = node['organization'] ? node['organization'] : 'Uber'
 
     sal_profile = {
       'PayloadIdentifier' => "#{prefix}.sal",

@@ -1,10 +1,10 @@
 #
-# Cookbook Name:: cpe_filebeat
+# Cookbook:: cpe_filebeat
 # Resources:: cpe_filebeat
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 #
-# Copyright (c) 2019-present, Uber Technologies, Inc.
+# Copyright:: (c) 2019-present, Uber Technologies, Inc.
 # All rights reserved.
 #
 # This source code is licensed under the Apache 2.0 license found in the
@@ -21,7 +21,7 @@ action :manage do
   cleanup if !install? && !configure?
 end
 
-action_class do # rubocop:disable Metrics/BlockLength
+action_class do
   def install?
     node['cpe_filebeat']['install']
   end

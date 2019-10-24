@@ -1,9 +1,9 @@
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 #
-# Cookbook Name:: cpe_notificationsettings
+# Cookbook:: cpe_notificationsettings
 # Resources:: cpe_notificationsettings
 #
-# Copyright (c) 2019-present, Uber Technologies, Inc.
+# Copyright:: (c) 2019-present, Uber Technologies, Inc.
 # All rights reserved.
 #
 # This source code is licensed under the BSD-style license found in the
@@ -24,7 +24,6 @@ action :config do
     return
   else
     prefix = node['cpe_profiles']['prefix']
-    # rubocop:disable Style/UnneededCondition
     organization = node['organization'] ? node['organization'] : 'Uber'
     # rubocop:enable Style/UnneededCondition
     notify_profile = {

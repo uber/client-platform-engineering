@@ -1,9 +1,9 @@
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 #
-# Cookbook Name:: cpe_notificationsettings
+# Cookbook:: cpe_notificationsettings
 # Recipe:: default
 #
-# Copyright (c) 2019-present, Uber Technologies, Inc.
+# Copyright:: (c) 2019-present, Uber Technologies, Inc.
 # All rights reserved.
 #
 # This source code is licensed under the BSD-style license found in the

@@ -1,10 +1,10 @@
 #
-# Cookbook Name:: cpe_workspaceone
+# Cookbook:: cpe_workspaceone
 # Resources:: cpe_workspaceone
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 #
-# Copyright (c) 2019-present, Uber Technologies, Inc.
+# Copyright:: (c) 2019-present, Uber Technologies, Inc.
 # All rights reserved.
 #
 # This source code is licensed under the Apache 2.0 license found in the
@@ -23,7 +23,7 @@ action :manage do
   uninstall if !install? && uninstall?
 end
 
-action_class do # rubocop:disable Metrics/BlockLength
+action_class do
   def enforce_mdm_profiles?
     node['cpe_workspaceone']['mdm_profiles']['enforce']
   end

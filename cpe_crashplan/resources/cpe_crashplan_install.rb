@@ -1,10 +1,10 @@
 #
-# Cookbook Name:: cpe_crashplan
+# Cookbook:: cpe_crashplan
 # Resources:: cpe_crashplan_install
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 #
-# Copyright (c) 2019-present, Uber, Inc.
+# Copyright:: (c) 2019-present, Uber, Inc.
 # All rights reserved.
 #
 # This source code is licensed under the Apache 2.0 license found in the
@@ -19,8 +19,6 @@ action :manage do
   install if install? && !uninstall?
   uninstall if uninstall?
 end
-
-# rubocop:disable Metrics/BlockLength
 action_class do
   def install?
     node['cpe_crashplan']['install']
