@@ -13,27 +13,27 @@ These cookbooks are offered by Facebook in the [IT-CPE](https://github.com/faceb
 
 Attributes
 ----------
-* node['cpe_workspace']
-* node['cpe_workspace']['cache_invalidation']
-* node['cpe_workspace']['hubcli_path']
-* node['cpe_workspace']['install']
-* node['cpe_workspace']['manage']
-* node['cpe_workspace']['mdm_profiles']
-* node['cpe_workspace']['mdm_profiles']['enforce']
-* node['cpe_workspace']['mdm_profiles']['profiles']
-* node['cpe_workspace']['mdm_profiles']['profiles']['device']
-* node['cpe_workspace']['mdm_profiles']['profiles']['user']
-* node['cpe_workspace']['pkg']
-* node['cpe_workspace']['pkg']['allow_downgrade']
-* node['cpe_workspace']['pkg']['app_name']
-* node['cpe_workspace']['pkg']['checksum']
-* node['cpe_workspace']['pkg']['pkg_name']
-* node['cpe_workspace']['pkg']['pkg_url']
-* node['cpe_workspace']['pkg']['receipt']
-* node['cpe_workspace']['pkg']['version']
-* node['cpe_workspace']['prefs']
-* node['cpe_workspace']['uninstall']
-* node['cpe_workspace']['use_cache']
+* node['cpe_workspaceone']
+* node['cpe_workspaceone']['cache_invalidation']
+* node['cpe_workspaceone']['hubcli_path']
+* node['cpe_workspaceone']['install']
+* node['cpe_workspaceone']['manage']
+* node['cpe_workspaceone']['mdm_profiles']
+* node['cpe_workspaceone']['mdm_profiles']['enforce']
+* node['cpe_workspaceone']['mdm_profiles']['profiles']
+* node['cpe_workspaceone']['mdm_profiles']['profiles']['device']
+* node['cpe_workspaceone']['mdm_profiles']['profiles']['user']
+* node['cpe_workspaceone']['pkg']
+* node['cpe_workspaceone']['pkg']['allow_downgrade']
+* node['cpe_workspaceone']['pkg']['app_name']
+* node['cpe_workspaceone']['pkg']['checksum']
+* node['cpe_workspaceone']['pkg']['pkg_name']
+* node['cpe_workspaceone']['pkg']['pkg_url']
+* node['cpe_workspaceone']['pkg']['receipt']
+* node['cpe_workspaceone']['pkg']['version']
+* node['cpe_workspaceone']['prefs']
+* node['cpe_workspaceone']['uninstall']
+* node['cpe_workspaceone']['use_cache']
 
 Usage
 -----
@@ -57,20 +57,20 @@ By default the package will not be installed. If you need to test a beta release
 # HubCLI information and enforcing profiles
 `hubcli` is a new tool as of v1910 agent, that allows an administrator to effectively manage and enforce MDM profiles locally at the device level. While there is a symbolic link created at the time of the agent install/upgrade at `/usr/local/bin/hubcli`, this cookbook defaults to the explicit path, located within the agent application.
 
-`cpe_workspace` will enforce a list of profiles, based on the Name of the profile set within the console. Both Device and User level profiles are able to be scoped.
+`cpe_workspaceone` will enforce a list of profiles, based on the Name of the profile set within the console. Both Device and User level profiles are able to be scoped.
 
 As of v1910, there is only an installation feature. If for some reason you need to remove profiles, you must use the Console API or the Console administration pages.
 
 Please note that as of macOS Catalina, the key `PayloadRemovalDisallowed` is no longer honored at the MDM level if the value is set to `False`. This effectively means that **only** the mdmclient can remove MDM profiles, regardless if a user is an administrator on the dev ice or not.
 
 ## HubCLI cache
-By default, `cpe_workspace` one will create a cache of the json in the default chef cache folder.
+By default, `cpe_workspaceone` one will create a cache of the json in the default chef cache folder.
 
 By default, this cache will be invalidated in the following situations:
-- Cache age is over 2 hours (7200) seconds. This value can be changed with the `node['cpe_workspace']['cache_invalidation']` object.
+- Cache age is over 2 hours (7200) seconds. This value can be changed with the `node['cpe_workspaceone']['cache_invalidation']` object.
 - Device is running a higher OS version than the cached json version.
 
-If you do not want to use the cache, simply set `node['cpe_workspace']['use_cache']` to `false`.
+If you do not want to use the cache, simply set `node['cpe_workspaceone']['use_cache']` to `false`.
 
 Example
 -----
