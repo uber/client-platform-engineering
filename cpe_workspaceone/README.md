@@ -61,7 +61,7 @@ By default the package will not be installed. If you need to test a beta release
 
 As of v1910, there is only an installation feature. If for some reason you need to remove profiles, you must use the Console API or the Console administration pages.
 
-Please note that as of macOS Catalina, the key `PayloadRemovalDisallowed` is no longer honored at the MDM level if the value is set to `False`. This effectively means that **only** the mdmclient can remove MDM profiles, regardless if a user is an administrator on the dev ice or not.
+Please note that as of macOS Catalina, the key `PayloadRemovalDisallowed` is no longer honored at the MDM level if the value is set to `False`. This effectively means that **only** the mdmclient can remove MDM profiles, regardless if a user is an administrator on the device or not.
 
 ## HubCLI cache
 By default, `cpe_workspaceone` one will create a cache of the json in the default chef cache folder.
