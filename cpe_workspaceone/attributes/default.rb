@@ -38,4 +38,12 @@ default['cpe_workspaceone'] = {
   },
   'uninstall' => false,
   'use_cache' => true,
+  'cli_prefs' => {
+    'awcm-url' => nil,
+    'checkin-interval' => nil,
+    'menubar-icon' => nil,
+    'sample-interval' => nil,
+    'server-url' => nil,
+    'transmit-interval' => nil,
+  }
 }
