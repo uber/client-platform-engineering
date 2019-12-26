@@ -73,17 +73,30 @@ class Chef
     def ws1_hubcli_exists
       @ws1_hubcli_exists ||=
         begin
-          hubcli_path = node['cpe_workspaceone']['hubcli_path']
-          ::File.exists?(hubcli_path)
+          !node['cpe_workspaceone']['hubcli_path'].nil? && ::File.exists?(node['cpe_workspaceone']['hubcli_path'])
         end
     end
 
-    def _get_available_ws1_profiles_list(hubcli_path)
+    def hubcli_path
+      return 'hubcli' unless @ws1_hubcli_exists
+
+      return node['cpe_workspaceone']['hubcli_path'].gsub(/ /, '\ ')
+    end
+
+    def hubcli_execute(cmd, execute=true)
+      cmd = "#{hubcli_path} #{cmd.strip}"
+      if execute
+        cmd = shell_out(cmd)
+      end
+      cmd
+    end
+
+    def _get_available_ws1_profiles_list
       attributes = {}
       if node.macos?
         # spaces in path, so we need to convert them with gsub
-        cmd = shell_out(
-          "#{hubcli_path.gsub(/ /, '\ ')} profiles --list --json",
+        cmd = hubcli_execute(
+          "profiles --list --json",
         )
       end
       if cmd.exitstatus.zero?
