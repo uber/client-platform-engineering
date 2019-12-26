@@ -32,7 +32,7 @@ class Chef
 
           # If for some reason an admin doesn't want to use the cache, always return the json from WS1
           ws1_use_cache = node['cpe_workspaceone']['use_cache']
-          return _get_available_ws1_profiles_list(hubcli_path) unless ws1_use_cache
+          return _get_available_ws1_profiles_list unless ws1_use_cache
 
           # Setup cache file
           ws1_cache_file_path = ::File.join(Chef::Config[:file_cache_path], 'cpe_workspaceone-device_attributes.json')
@@ -46,13 +46,13 @@ class Chef
             # last checked OS version (Example, upgrading from 10.14 to 10.15 in between two hour chef cache), reject
             # the current cache and check again, so we can look for newly available profiles.
             if node.greater_than?(node['platform_version'], parsed_ws1_json['os_version'])
-              ws1_device_attributes = _get_available_ws1_profiles_list(hubcli_path)
+              ws1_device_attributes = _get_available_ws1_profiles_list
             else
               return parsed_ws1_json
             end
           # Cache either doesn't exist or isn't fresh
           else
-            ws1_device_attributes = _get_available_ws1_profiles_list(hubcli_path)
+            ws1_device_attributes = _get_available_ws1_profiles_list
           end
 
           # Only write the attributes if they come back in a good, clean state
@@ -70,17 +70,30 @@ class Chef
     def ws1_hubcli_exists
       @ws1_hubcli_exists ||=
         begin
-          hubcli_path = node['cpe_workspaceone']['hubcli_path']
-          ::File.exists?(hubcli_path)
+          !node['cpe_workspaceone']['hubcli_path'].nil? && ::File.exists?(node['cpe_workspaceone']['hubcli_path'])
         end
     end
 
-    def _get_available_ws1_profiles_list(hubcli_path)
+    def hubcli_path
+      return 'hubcli' unless @ws1_hubcli_exists
+
+      return node['cpe_workspaceone']['hubcli_path'].gsub(/ /, '\ ')
+    end
+
+    def hubcli_execute(cmd, execute=true)
+      cmd = "#{hubcli_path} #{cmd.strip}"
+      if execute
+        cmd = shell_out(cmd)
+      end
+      cmd
+    end
+
+    def _get_available_ws1_profiles_list
       attributes = {}
       if node.macos?
         # spaces in path, so we need to convert them with gsub
-        cmd = shell_out(
-          "#{hubcli_path.gsub(/ /, '\ ')} profiles --list --json",
+        cmd = hubcli_execute(
+          "profiles --list --json",
         )
       end
       if cmd.exitstatus.zero?
