@@ -81,8 +81,7 @@ action_class do # rubocop:disable Metrics/BlockLength
       # Because of user/device level profiles being in one array, we need the if statement outside of the execute block
       if enforced_device_ws1_profiles.include?(profile_name)
         execute "Sending #{profile_name} for device installation to Workspace One console" do
-          # spaces in path, so we need to convert them with gsub
-          command node.hubcli_execute("profiles --install #{profile_id}", execute=false)
+          command node.hubcli_cmd("profiles --install #{profile_id}")
           only_if { node.ws1_hubcli_exists } # non-gsub or guard will fail.
           not_if { node.profile_installed?('ProfileDisplayName', installed_profile_name) }
           # Only wait two mintues for this command to finish, because something may be up
@@ -105,8 +104,7 @@ action_class do # rubocop:disable Metrics/BlockLength
       # Because of user/device level profiles being in one array, we need the if statement outside of the execute block
       if enforced_user_ws1_profiles.include?(profile_name)
         execute "Sending #{profile_name} for user installation to Workspace One console" do
-          # spaces in path, so we need to convert them with gsub
-          command node.hubcli_execute("profiles --install #{profile_id}", execute=false)
+          command node.hubcli_cmd("profiles --install #{profile_id}")
           only_if { node.ws1_hubcli_exists } # non-gsub or guard will fail.
           not_if { node.user_profile_installed?('ProfileDisplayName', installed_profile_name) }
         end
@@ -191,7 +189,7 @@ action_class do # rubocop:disable Metrics/BlockLength
 
   def uninstall
     return unless node['cpe_workspaceone']['uninstall']
-    
+
     macos_uninstall if node.macos?
   end
 
