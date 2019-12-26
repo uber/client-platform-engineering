@@ -24,6 +24,13 @@ action :manage do
 end
 
 action_class do # rubocop:disable Metrics/BlockLength
+  WS1_DEFAULT_PREFS = {
+    'checkin-interval' => 60,
+    'menubar-icon' => true,
+    'sample-interval' => 60,
+    'transmit-interval' => 60,
+  }.freeze
+
   def enforce_mdm_profiles?
     node['cpe_workspaceone']['mdm_profiles']['enforce']
   end
@@ -46,7 +53,20 @@ action_class do # rubocop:disable Metrics/BlockLength
     macos_enforce_mdm_profiles if node.macos?
   end
 
-  def set_cli_config
+  def set_cli_config(flag, val)
+    default = WS1_DEFAULT_PREFS[flag]
+    val = val || default
+    cmd = node.hubcli_execute("config --set #{flag} #{val}")
+    unless cmd.exitstatus.zero?
+      if !cmd.stderr.include?('Error: Invalid value for option') || val == default
+        cmd.error!
+      end
+      Chef::Log.warn("cpe_workspaceone - #{cmd.stderr.strip} (#{val}) - setting default")
+      set_cli_config(flag, default)
+    end
+  end
+
+  def manage_cli_config
     unless node.ws1_hubcli_exists
       Chef::Log.warn('cpe_workspaceone - hubcli path does not exist, cannot enforce MDM profiles!')
       return
@@ -54,7 +74,12 @@ action_class do # rubocop:disable Metrics/BlockLength
 
     prefs = node['cpe_workspaceone']['cli_prefs'].reject { |_, v| v.nil? }
     prefs.each do |flag, val|
-      node.hubcli_execute("config --set #{flag} #{val}")
+      unless WS1_DEFAULT_PREFS.keys.include?(flag)
+        Chef::Log.warn("cpe_workspaceone - refusing to manage unknown cli preference '#{flag}'")
+        next
+      end
+
+      set_cli_config(flag, val)
     end
   end
 
@@ -184,7 +209,7 @@ action_class do # rubocop:disable Metrics/BlockLength
     end
     node.default['cpe_profiles']["#{prefix}.ws1"] = ws1agent_profile
 
-    set_cli_config
+    manage_cli_config
   end
 
   def uninstall

@@ -51,6 +51,21 @@ You can add any arbitrary keys to `node['cpe_workspaceone']['prefs']` to have th
 
 Due to the fact that `cpe_profiles` usually runs last or second to last in a typical run list, a `macos_userdefaults` call is made during the `manage` resource block. This is so if you chose to disable the menubar, it will be honored at the time of agent installation. This call cannot be made while the agent is running as it is unfortunately not honored by Workspace One at this time.
 
+Separate preferences are available through `hubcli config`, and this cookbook manages four of them:
+
+```
+'cli_prefs' => {
+  'checkin-interval' => 60,
+  'menubar-icon' => true,
+  'sample-interval' => 60,
+  'transmit-interval' => 60,
+}
+```
+
+The defaults here are set in case of `nil`. See `hubcli config --help` for more information.
+
+The cookbook intentionally does not manage 'server-url' or 'awcm-url'.
+
 # Package
 By default the package will not be installed. If you need to test a beta release of the agent, be aware that `allow_downgrade` value will not be honored if there is a space in the version number. As of v1910, the beta version string is '19.10 Beta' which causes the built in ruby gem `Gem::Version` to fail.
 
