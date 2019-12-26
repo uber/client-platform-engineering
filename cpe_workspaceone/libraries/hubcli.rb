@@ -80,16 +80,16 @@ class Chef
       return node['cpe_workspaceone']['hubcli_path'].gsub(/ /, '\ ')
     end
 
-    def hubcli_execute(cmd, execute=true)
+    def hubcli_cmd(cmd)
+      "#{hubcli_path} #{cmd.strip}"
+    end
+
+    def hubcli_execute(cmd)
       unless ws1_hubcli_exists
         raise "Tried to execute hubcli, hubcli does not exist"
       end
 
-      cmd = "#{hubcli_path} #{cmd.strip}"
-      if execute
-        cmd = shell_out(cmd)
-      end
-      cmd
+      shell_out(hubcli_cmd(cmd))
     end
 
     def _get_available_ws1_profiles_list
