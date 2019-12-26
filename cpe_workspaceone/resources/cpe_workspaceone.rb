@@ -42,7 +42,20 @@ action_class do # rubocop:disable Metrics/BlockLength
 
   def enforce_mdm_profiles
     return unless node['cpe_workspaceone']['mdm_profiles']['enforce']
+
     macos_enforce_mdm_profiles if node.macos?
+  end
+
+  def set_cli_config
+    unless node.ws1_hubcli_exists
+      Chef::Log.warn('cpe_workspaceone - hubcli path does not exist, cannot enforce MDM profiles!')
+      return
+    end
+
+    prefs = node['cpe_workspaceone']['cli_prefs'].reject { |_, v| v.nil? }
+    prefs.each do |flag, val|
+      node.hubcli_execute("config --set #{flag} #{val}")
+    end
   end
 
   def macos_enforce_mdm_profiles
@@ -55,8 +68,6 @@ action_class do # rubocop:disable Metrics/BlockLength
     # Bail if there are no device attributes
     device_attributes = node.ws1_device_attributes
     return if device_attributes.empty? || device_attributes.nil?
-
-    hubcli_path = node['cpe_workspaceone']['hubcli_path']
 
     # Loop through the enforced device profiles and compare with available profiles from MDM
     enforced_device_ws1_profiles = node['cpe_workspaceone']['mdm_profiles']['profiles']['device']
@@ -71,7 +82,7 @@ action_class do # rubocop:disable Metrics/BlockLength
       if enforced_device_ws1_profiles.include?(profile_name)
         execute "Sending #{profile_name} for device installation to Workspace One console" do
           # spaces in path, so we need to convert them with gsub
-          command "#{hubcli_path.gsub(/ /, '\ ')} profiles --install #{profile_id}"
+          command node.hubcli_execute("profiles --install #{profile_id}", execute=false)
           only_if { node.ws1_hubcli_exists } # non-gsub or guard will fail.
           not_if { node.profile_installed?('ProfileDisplayName', installed_profile_name) }
           # Only wait two mintues for this command to finish, because something may be up
@@ -95,7 +106,7 @@ action_class do # rubocop:disable Metrics/BlockLength
       if enforced_user_ws1_profiles.include?(profile_name)
         execute "Sending #{profile_name} for user installation to Workspace One console" do
           # spaces in path, so we need to convert them with gsub
-          command "#{hubcli_path.gsub(/ /, '\ ')} profiles --install #{profile_id}"
+          command node.hubcli_execute("profiles --install #{profile_id}", execute=false)
           only_if { node.ws1_hubcli_exists } # non-gsub or guard will fail.
           not_if { node.user_profile_installed?('ProfileDisplayName', installed_profile_name) }
         end
@@ -105,6 +116,7 @@ action_class do # rubocop:disable Metrics/BlockLength
 
   def install
     return unless node['cpe_workspaceone']['install']
+
     macos_install if node.macos?
   end
 
@@ -131,6 +143,7 @@ action_class do # rubocop:disable Metrics/BlockLength
 
   def manage
     return unless node['cpe_workspaceone']['manage']
+
     macos_manage if node.macos?
   end
 
@@ -172,10 +185,13 @@ action_class do # rubocop:disable Metrics/BlockLength
       end
     end
     node.default['cpe_profiles']["#{prefix}.ws1"] = ws1agent_profile
+
+    set_cli_config
   end
 
   def uninstall
     return unless node['cpe_workspaceone']['uninstall']
+    
     macos_uninstall if node.macos?
   end
 
