@@ -14,8 +14,10 @@
 default['cpe_nudge'] = {
   'install' => false,
   'uninstall' => false,
+  'python_path' => '/Library/nudge/Python.framework',
+  'shebang' => '#!/Library/nudge/Python.framework/Versions/3.8/bin/python3',
   'custom_resources' => false,
-  'json_path' => '/Library/Application Support/nudge/Resources/nudge.json',
+  'json_path' => '/Library/nudge/Resources/nudge.json',
   'json_prefs' => {
     'preferences' => nil,
     'software_updates' => nil,
@@ -27,12 +29,12 @@ default['cpe_nudge'] = {
       'Aqua',
     ],
     'program_arguments' => [
-      '/Library/Application Support/nudge/Resources/nudge',
+      '/Library/nudge/Resources/nudge',
     ],
     'run_at_load' => true,
-    'standard_out_path' => '/Library/Application Support/nudge/Logs/nudge.log',
+    'standard_out_path' => '/Library/nudge/Logs/nudge.log',
     'standard_error_path' =>
-      '/Library/Application Support/nudge/Logs/nudge.log',
+      '/Library/nudge/Logs/nudge.log',
     'start_calendar_interval' => [
       {
         'Minute' => 15,

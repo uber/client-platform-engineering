@@ -1,6 +1,6 @@
 cpe_nudge Cookbook
 ========================
-Installs and manages all components of [nudge](https://github.com/erikng/nudge)
+Installs and manages all components of [nudge](https://github.com/erikng/nudge) except for the embedded Python.framework
 
 Requirements
 ------------
@@ -24,6 +24,25 @@ Attributes
 
 Notes
 -----
+This cookbook does not ship the `Python.framework` file found within the nudge v2.0 codebase
+
+This process will certainly be organization specific and you can utilize other tooling such as `cpe_remote_pkg` to install your own python (or the embedded python within the github).
+
+You can enforce your own, custom python and shebang, pointing to your shipped python.
+
+For example in your recipe you could do the following:
+
+```
+# Install python framework first
+cpe_remote_pkg 'nudge_python' do
+  version '3.8.0'
+  checksum 'ef52f595c6046f8ce75bd48d57af9d16972125b60318763c90712b8d9c8d51c5'
+  receipt 'com.org.pkg.nudge.python'
+end
+# Setup cpe_nudge
+node.default['cpe_nudge']'python_path'] = '/Library/cpe/frameworks/Python.framework'
+node.default['cpe_nudge']['shebang'] = '#!/Library/cpe/frameworks/Python.framework/Versions/3.8/bin/python3'
+```
 
 Usage
 -----
