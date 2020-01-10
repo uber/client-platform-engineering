@@ -56,7 +56,7 @@ Separate preferences are available through `hubcli config`, and this cookbook ma
 ```
 'cli_prefs' => {
   'checkin-interval' => 60,
-  'menubar-icon' => true,
+  'menubar-icon' => 0,
   'sample-interval' => 60,
   'transmit-interval' => 60,
 }
@@ -64,7 +64,7 @@ Separate preferences are available through `hubcli config`, and this cookbook ma
 
 The defaults here are set in case of `nil`. See `hubcli config --help` for more information.
 
-The cookbook intentionally does not manage 'server-url' or 'awcm-url'.
+The cookbook intentionally does not manage 'server-url' or 'awcm-url'. 'menubar-icon' must be `0` or `1`. `true` and `false` work in a shell, but mysteriously not through `shell_out`.
 
 # Package
 By default the package will not be installed. If you need to test a beta release of the agent, be aware that `allow_downgrade` value will not be honored if there is a space in the version number. As of v1910, the beta version string is '19.10 Beta' which causes the built in ruby gem `Gem::Version` to fail.
