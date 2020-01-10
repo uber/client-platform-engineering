@@ -40,7 +40,7 @@ default['cpe_workspaceone'] = {
   'use_cache' => true,
   'cli_prefs' => {
     'checkin-interval' => 60,
-    'menubar-icon' => true,
+    'menubar-icon' => 1,
     'sample-interval' => 60,
     'transmit-interval' => 60,
   }
