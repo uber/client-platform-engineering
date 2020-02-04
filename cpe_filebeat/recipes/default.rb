@@ -11,6 +11,4 @@
 # LICENSE file in the root directory of this source tree.
 #
 
-return if node.windows?
-
 cpe_filebeat 'Install and Configure Filebeat'

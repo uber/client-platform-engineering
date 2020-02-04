@@ -36,6 +36,8 @@ if node.macos?
   path = [
     '/usr/sbin', '/usr/bin', '/sbin', '/bin', '/usr/libexec', '/usr/local/bin'
   ]
+elsif node.linux?
+  path = ['/usr/sbin', '/usr/bin', '/sbin', '/bin']
 else
   path = nil
 end

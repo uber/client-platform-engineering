@@ -11,18 +11,13 @@
 # LICENSE file in the root directory of this source tree.
 #
 
-datadir = value_for_platform_family(
-  'windows' => 'C:\ProgramData',
-  'default' => '/opt',
-)
-installdir = value_for_platform_family(
-  'windows' => 'C:\Program Files',
-  'default' => '/opt',
+filebeat_dir = value_for_platform_family(
+  'windows' => 'C:\ProgramData\filebeat',
+  'default' => '/opt/filebeat',
 )
 
 default['cpe_filebeat'] = {
-  'datadir' => datadir,
-  'installdir' => installdir,
+  'dir' => filebeat_dir,
   'install' => false,
   'zip_info' => {
     'debian' => {

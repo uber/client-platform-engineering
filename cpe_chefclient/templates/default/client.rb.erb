@@ -1,0 +1,42 @@
+<% unless @chef.empty? %>
+  <% @chef.each do |k, v| -%>
+      <% if v.is_a?(Array) %>
+<%= k %> <%= v.to_s %>
+      <% elsif v.start_with?(':') %>
+<%= k %> <%= v.to_s %>
+      <% elsif v.is_a?(String) %>
+<%= k %> '<%= v.to_s %>'
+      <% else %>
+<%= k %> <%= v %>
+      <% end %>
+  <% end %>
+<% end %>
+
+<% unless @ohai.empty? %>
+  <% @ohai.each do |k, v| -%>
+    <% if k == 'plugin_path' %>
+      <% if v.is_a?(Array) %>
+          <% v.each do |path| -%>
+ohai.<%= k %> << '<%= path %>'
+          <% end %>
+      <% else %>
+ohai.<%= k %> << '<%= v %>'
+      <% end %>
+    <% elsif k == 'disabled_plugins' %>
+ohai.<%= k %> = <%= v.map { |v| v.to_sym } %>
+    <% elsif k == 'plugin_configs' %>
+      <% v.each do |plugin_name, conf| -%>
+      <% # We need to convert the hash key/values to symbols as this is what ohai expects %>
+        <% conf.each do |k, v| %>
+          <% if v.is_a?(Array) %>
+ohai.plugin[:<%= plugin_name %>] = { :<%= k %> => <%= v.map{|v| v.to_sym} %>}
+          <% else %>
+ohai.plugin[:<%= plugin_name %>] = <%= Hash[conf.map{|(k,v)| [k.to_sym,v.to_sym]}] %>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% else %>
+ohai.<%= k %> = '<%= v %>'
+    <% end %>
+  <% end %>
+<% end %>

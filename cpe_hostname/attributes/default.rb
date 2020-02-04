@@ -14,4 +14,5 @@
 default['cpe_hostname'] = {
   'enforce' => false,
   'hostname' => nil,
+  'suffix' => nil,
 }

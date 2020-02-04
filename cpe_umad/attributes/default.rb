@@ -39,7 +39,7 @@ default['cpe_umad'] = {
   'la_identifier' => 'com.erikng.umad',
   'ld_dep' => {
     'keep_alive' => {
-      'path_state' => {
+      'PathState' => {
         '/var/tmp/umad/.check_dep_record' => true,
       },
     },
@@ -52,7 +52,7 @@ default['cpe_umad'] = {
   'ld_dep_identifier' => 'com.erikng.umad.check_dep_record',
   'ld_nag' => {
     'keep_alive' => {
-      'path_state' => {
+      'PathState' => {
         '/var/tmp/umad/.trigger_nag' => true,
       },
     },

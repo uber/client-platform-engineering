@@ -1,0 +1,20 @@
+# Attempt to load any handlers we can find
+handlers = <%= @configs %>
+handler_dir = '<%= @handlerdir %>'
+handlers.each do |name, conf|
+  begin
+    require ::File.join(handler_dir, conf['file'])
+    # When instantiating a class by string name, it needs a little more help.
+    handler_class =  "Chef::Handler::#{name}"
+    handler_const = Object.const_get(handler_class)
+    handler = handler_const.new(conf['parameters'])
+    report_handlers << handler
+    exception_handlers << handler
+  rescue => e
+    # If our crazy assumptions failed us while trying to load handlers, we can
+    # still move on and try the chef run.
+    Chef::Log.warn("Failed to load chef handler #{name}, continuing to next handler")
+    Chef::Log.warn("Exception thrown was: #{e}")
+    next
+  end
+end

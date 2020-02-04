@@ -30,6 +30,7 @@ action_class do
 
   def enforce
     hostname = node['cpe_hostname']['hostname']
+    suffix = node['cpe_hostname']['suffix']
 
     # If value isn't specified, don't do anything
     if hostname.nil?
@@ -46,23 +47,24 @@ action_class do
         )
         return
       end
-      # Loop through the types of hostnames for macOS and set them
-      # LocalHostName cannot have at signs, spaces, dots or underscores.
-      # Replace with hyphens.
-      fixed_hostname = hostname.gsub(/[@._ ]/, '-')
       %w[
         ComputerName
         HostName
         LocalHostName
       ].each do |type|
+        # Loop through the types of hostnames for macOS and set them
+        # LocalHostName cannot have at signs, spaces, dots or underscores.
+        # Replace with hyphens.
+        fixed_hostname = hostname.gsub(/[@._ ]/, '-')
+
+        # If you pass a suffix, add it to the HostName. This is to fix slow
+        # Ohai in VMware Fusion VMs.
+        if type == 'HostName' && !(suffix.nil? || suffix.empty?)
+          fixed_hostname = fixed_hostname.to_s + ".#{suffix}"
+        end
         execute "Setting #{type} to #{fixed_hostname}" do
           command "/usr/sbin/scutil --set #{type} #{fixed_hostname}"
-          # Reduce CPU cycles by using ohai attributes for hostname
-          if type == 'HostName'
-            only_if { node['hostname'] != fixed_hostname }
-          else
-            only_if { check_hostname_macos(type) != fixed_hostname }
-          end
+          only_if { check_hostname_macos(type) != fixed_hostname }
         end
       end
     elsif node.windows?

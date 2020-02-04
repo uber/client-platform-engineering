@@ -40,11 +40,11 @@ action_class do
     # If there is a valid config and the Include directive does not exist, add
     # it to the list to be included
     if ssh_config_set && !CPE::SSH.chef_managed_config?
-      ssh_config << "\n#{CPE::SSH.ssh_config_line}"
+      ssh_config += CPE::SSH.ssh_config_lines
     # If there is no longer a config set, make sure to remove include and
     # delete the config on disk
     elsif !ssh_config_set
-      ssh_config.reject! { |line| line.include?(CPE::SSH.ssh_config_line) }
+      remove_cpe_include(ssh_config)
       # Make sure to delete the file if we no longer have any configs set
       file CPE::SSH.cpe_config_path do
         action :delete
@@ -86,7 +86,7 @@ action_class do
     # If this is no longer managed, remove directives from ssh_config
     if CPE::SSH.chef_managed?
       ssh_config = CPE::SSH.read_config
-      ssh_config.reject! { |line| line.include?('# Chef Managed') }
+      remove_cpe_include(ssh_config)
       file CPE::SSH.config_path do
         owner root_owner
         group root_group
@@ -100,6 +100,13 @@ action_class do
     end
     file CPE::SSH.known_hosts_path do
       action :delete
+    end
+  end
+
+  def remove_cpe_include(ssh_config)
+    tag_index = ssh_config.index("#{CPE::SSH::CHEF_MANAGED_TAG}\n")
+    if tag_index && tag_index >= 0
+      ssh_config.slice!(tag_index..tag_index + 1)
     end
   end
 end

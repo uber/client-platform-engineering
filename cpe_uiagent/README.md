@@ -27,7 +27,7 @@ The profile delivers a payload of all keys in `node['cpe_uiagent']` that are non
 
 You can add any arbitrary keys to `node['cpe_uiagent']` to have them added to your profile.  As long as the values are not nil and create a valid profile, this cookbook will install and manage them.
 
-```ruby
+```
 # Disable 32-Bit warnings on Mojave
 node.default['cpe_uiagent']['CSUIDisable32BitWarnings'] = true
 

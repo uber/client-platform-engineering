@@ -1,0 +1,5 @@
+$random_number = (Get-Random -Minimum 1 -Maximum <%= node['cpe_sal']['task']['seconds_random_delay'] %>)
+
+Start-Sleep -Seconds $random_number
+
+& "<%= ::File.join(node['cpe_sal']['gosal_dir'], 'gosal.exe') %>" --config "<%= ::File.join(node['cpe_sal']['gosal_dir'], 'config.json') %>"

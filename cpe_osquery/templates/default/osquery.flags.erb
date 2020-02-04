@@ -1,0 +1,5 @@
+<% unless @options.empty? %>
+  <% @options.each do |k, v| -%>
+--<%= k %>=<%= v %>
+  <% end %>
+<% end %>
