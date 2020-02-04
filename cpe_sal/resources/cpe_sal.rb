@@ -68,13 +68,13 @@ action_class do # rubocop:disable Metrics/BlockLength
     # Ensure the folder exists and is properly managed
     create_sal_folder(gosal_dir)
 
-    gosal_exe = ::File.join(gosal_dir, 'gosal.exe')
     # Save gosal in your pkg repo as: pkgrepo/name/gosal-version.exe
+    gosal_exe = ::File.join(gosal_dir, 'gosal.exe')
+    # Defining owner/group properties here causes this to be non-idempotent
     cpe_remote_file pkg_info['name'] do
       checksum pkg_info['checksum']
       file_name "#{pkg_info['name']}-#{pkg_info['version']}.exe"
-      group root_group
-      owner root_owner
+      mode '0644'
       path gosal_exe
     end
   end
