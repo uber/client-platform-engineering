@@ -20,7 +20,7 @@ action :manage do
   remove if uninstall?
 end
 
-action_class do
+action_class do # rubocop:disable Metrics/BlockLength
   def custom_resources?
     node['cpe_umad']['custom_resources']
   end
@@ -33,25 +33,45 @@ action_class do
     node['cpe_umad']['uninstall']
   end
 
+  def label(cpe_identifier)
+    # This portion is taken from cpe_launchd. Since we use cpe_launchd to
+    # create our launch agent, the label specified in the attributes will not
+    # match the actual label/path that's created. Doing this will result in
+    # the right file being targeted.
+    if cpe_identifier.start_with?('com')
+      name = cpe_identifier.split('.')
+      name.delete('com')
+      identifier = name.join('.')
+      identifier = "#{node['cpe_launchd']['prefix']}.#{identifier}"
+    end
+    identifier
+  end
+
   def install
     # Create umad base folders
     [
-      '/Library/Application Support/umad',
-      '/Library/Application Support/umad/Resources',
-      '/Library/Application Support/umad/Resources/umad.nib',
+      '/Library/umad',
+      '/Library/umad/Resources',
+      '/Library/umad/Resources/umad.nib',
     ].each do |dir|
       directory dir do
-        group 'wheel'
-        owner 'root'
+        owner root_owner
+        group root_group
         mode '0755'
         action :create
       end
     end
 
     # Create Log folder with 777 permissions so user agent can write to it.
-    directory '/Library/Application Support/umad/Logs' do
-      group 'wheel'
-      owner 'root'
+    directory '/Library/umad/Logs' do
+      owner root_owner
+      group root_group
+      mode '0777'
+      action :create
+    end
+
+    # Create Log file with 777 permissions so user agent can write to it.
+    file '/Library/umad/Logs/umad.log' do
       mode '0777'
       action :create
     end
@@ -65,15 +85,75 @@ action_class do
       'umad_trigger_nag',
     ]
 
+    ld_la_identifiers = [
+      label(node['cpe_umad']['la_identifier']),
+      label(node['cpe_umad']['ld_dep_identifier']),
+      label(node['cpe_umad']['ld_nag_identifier']),
+    ]
+
     # Install UMAD files
+    # If we are updating umad, we need to disable the launch agent and
+    # daemons. cpe_launchd will turn it back on later in the run so we
+    # don't have a mismatch in what's loaded in memory and what's on disk
     umad_files.each do |item|
-      cookbook_file "/Library/Application Support/umad/Resources/#{item}" do
-        owner 'root'
-        group 'wheel'
-        mode '0755'
-        action :create
-        path "/Library/Application Support/umad/Resources/#{item}"
-        source "resources/#{item}"
+      if ['umad', 'umad_check_dep_record', 'umad_trigger_nag'].include?(item)
+        if ::File.exists?(node['cpe_umad']['python_path'])
+          # Python file
+          template "/Library/umad/Resources/#{item}" do
+            backup false
+            owner root_owner
+            group root_group
+            mode '0755'
+            source item
+            variables('shebang' => node['cpe_umad']['shebang'])
+            ld_la_identifiers.each do |identifier|
+              if ::File.exists?("/Library/LaunchAgents/#{identifier}.plist") \
+                || ::File.exists?("/Library/LaunchDaemons/#{identifier}.plist")
+                notifies :disable, "launchd[#{identifier}]", :immediately
+              end
+            end
+          end
+        else
+          # Use legacy nudge if python framework doesn't exist
+          cookbook_file "/Library/umad/Resources/#{item}" do
+            backup false
+            owner root_owner
+            group root_group
+            mode '0755'
+            action :create
+            path "/Library/umad/Resources/#{item}"
+            source "resources/py2_#{item}"
+            ld_la_identifiers.each do |identifier|
+              if ::File.exists?("/Library/LaunchAgents/#{identifier}.plist") \
+                || ::File.exists?("/Library/LaunchDaemons/#{identifier}.plist")
+                notifies :disable, "launchd[#{identifier}]", :immediately
+              end
+            end
+          end
+        end
+      elsif item == 'FoundationPlist.py' && ::File.exists?(node['cpe_umad']['python_path'])
+        # FoundationPlist is not needed on embedded python version of UMAD
+        next
+      else
+        cookbook_file "/Library/umad/Resources/#{item}" do
+          owner root_owner
+          group root_group
+          mode '0755'
+          action :create
+          path "/Library/umad/Resources/#{item}"
+          if ::File.exists?(node['cpe_umad']['python_path'])
+            source "resources/#{item}"
+          # Use legacy UMAD if python framework doesn't exist
+          else
+            source "resources/py2_#{item}"
+          end
+          ld_la_identifiers.each do |identifier|
+            if ::File.exists?("/Library/LaunchAgents/#{identifier}.plist") \
+              || ::File.exists?("/Library/LaunchDaemons/#{identifier}.plist")
+              notifies :disable, "launchd[#{identifier}]", :immediately
+            end
+          end
+        end
       end
     end
 
@@ -93,13 +173,19 @@ action_class do
 
     # Install UMAD resource files
     umad_resource_files.each do |item|
-      cookbook_file "/Library/Application Support/umad/Resources/#{item}" do
-        owner 'root'
-        group 'wheel'
+      cookbook_file "/Library/umad/Resources/#{item}" do
+        owner root_owner
+        group root_group
         mode '0755'
         action :create
-        path "/Library/Application Support/umad/Resources/#{item}"
+        path "/Library/umad/Resources/#{item}"
         source "#{source_path}/#{item}"
+        ld_la_identifiers.each do |identifier|
+          if ::File.exists?("/Library/LaunchAgents/#{identifier}.plist") \
+            || ::File.exists?("/Library/LaunchDaemons/#{identifier}.plist")
+            notifies :disable, "launchd[#{identifier}]", :immediately
+          end
+        end
       end
     end
 
@@ -111,20 +197,53 @@ action_class do
 
     # Install UMAD nib files
     umad_nib_files.each do |item|
-      cookbook_file "/Library/Application Support/umad/Resources/umad.nib/#{item}" do
-        owner 'root'
-        group 'wheel'
+      cookbook_file "/Library/umad/Resources/umad.nib/#{item}" do
+        owner root_owner
+        group root_group
         mode '0755'
         action :create
-        path "/Library/Application Support/umad/Resources/umad.nib/#{item}"
+        path "/Library/umad/Resources/umad.nib/#{item}"
         source "umad.nib/#{item}"
+        ld_la_identifiers.each do |identifier|
+          if ::File.exists?("/Library/LaunchAgents/#{identifier}.plist") \
+            || ::File.exists?("/Library/LaunchDaemons/#{identifier}.plist")
+            notifies :disable, "launchd[#{identifier}]", :immediately
+          end
+        end
       end
+    end
+
+    launchd label(node['cpe_umad']['la_identifier']) do
+      action :nothing
+      type 'agent'
+    end
+
+    launchd label(node['cpe_umad']['ld_dep_identifier']) do
+      action :nothing
+      type 'daemon'
+    end
+
+    launchd label(node['cpe_umad']['ld_nag_identifier']) do
+      action :nothing
+      type 'daemon'
+    end
+
+    # Delete old UMAD directory
+    directory '/Library/Application Support/umad' do
+      action :delete
+      recursive true
     end
   end
 
   def remove
-    # Delete UMAD directory
+    # Delete old UMAD directory
     directory '/Library/Application Support/umad' do
+      action :delete
+      recursive true
+    end
+
+    # Delete UMAD directory
+    directory '/Library/umad' do
       action :delete
       recursive true
     end

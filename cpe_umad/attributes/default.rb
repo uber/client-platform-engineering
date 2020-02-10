@@ -14,6 +14,8 @@
 default['cpe_umad'] = {
   'install' => false,
   'uninstall' => false,
+  'python_path' => '/Library/umad/Python.framework',
+  'shebang' => '#!/Library/umad/Python.framework/Versions/3.8/bin/python3',
   'custom_resources' => false,
   'manage_agents' => false,
   'la' => {
@@ -21,11 +23,11 @@ default['cpe_umad'] = {
       'Aqua',
     ],
     'program_arguments' => [
-      '/Library/Application Support/umad/Resources/umad',
+      '/Library/umad/Resources/umad',
     ],
     'run_at_load' => true,
-    'standard_out_path' => '/Library/Application Support/umad/Logs/umad.log',
-    'standard_error_path' => '/Library/Application Support/umad/Logs/umad.log',
+    'standard_out_path' => '/Library/umad/Logs/umad.log',
+    'standard_error_path' => '/Library/umad/Logs/umad.log',
     'start_calendar_interval' => [
       {
         'Minute' => 0,
@@ -44,7 +46,7 @@ default['cpe_umad'] = {
       },
     },
     'program_arguments' => [
-      '/Library/Application Support/umad/Resources/umad_check_dep_record',
+      '/Library/umad/Resources/umad_check_dep_record',
     ],
     'on_demand' => true,
     'type' => 'daemon',
@@ -57,7 +59,7 @@ default['cpe_umad'] = {
       },
     },
     'program_arguments' => [
-      '/Library/Application Support/umad/Resources/umad_trigger_nag',
+      '/Library/umad/Resources/umad_trigger_nag',
     ],
     'on_demand' => true,
     'type' => 'daemon',
