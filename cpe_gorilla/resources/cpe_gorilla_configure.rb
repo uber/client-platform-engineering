@@ -52,7 +52,7 @@ action_class do
     file config_yaml do
       rights :read, 'Everyone'
       rights :full_control, 'Administrators'
-      content gorilla_prefs.to_yaml
+      content JSON.parse(gorilla_prefs.to_json).to_yaml # We have to convert to json first for hashes due to a chef bug
     end
 
     # Get info about gorilla install, rejecting unset values
