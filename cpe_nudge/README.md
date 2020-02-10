@@ -88,6 +88,7 @@ node.default['cpe_nudge']['json_prefs'] = {
     'cut_off_date' => '2018-12-01-00:00',
     'cut_off_date_warning' => 3,
     'days_between_notifications' => 0,
+    'dismissal_count_threshold' => 100,
     'main_subtitle_text' => 'A friendly reminder from your local CPE team',
     'main_title_text' => 'macOS Update',
     'minimum_os_version' => '10.14.2',
