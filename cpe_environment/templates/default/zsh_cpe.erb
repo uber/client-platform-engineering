@@ -1,0 +1,23 @@
+<% unless @config['paths'].nil? || @config['paths'].empty? %>
+ENV_PATHS=<%= @config['paths'].join(':') %>
+function zsh_load_cpe() {
+  export PATH="$ENV_PATHS:$PATH"
+}
+
+function zsh_unload_cpe() {
+  export PATH=${PATH/$ENV_PATHS:/}
+  export PATH=${PATH/$ENV_PATHS/}
+
+}
+
+autoload -Uz add-zsh-hook
+# for zsh, only enable our hooks before running the command
+# and disable it just before printing the prompt
+add-zsh-hook preexec zsh_load_cpe
+add-zsh-hook precmd zsh_unload_cpe
+<% end -%>
+<% unless @config['vars'].nil? %>
+  <% @config['vars'].each do |var,value| %>
+export <%= var %>=<%= value %>
+  <%- end -%>
+<%- end -%>
