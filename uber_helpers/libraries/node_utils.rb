@@ -214,7 +214,7 @@ class Chef
     end
 
     def macos_application_version(apppath, key)
-      unless macos?
+      unless node.macos?
         Chef::Log.warn('node.macos_application_version called on non-OS X!')
         return ''
       end
@@ -229,8 +229,18 @@ class Chef
       return ''
     end
 
+    def macos_system_cert_installed?(cert_name)
+      unless node.macos?
+        Chef::Log.warn('node.macos_cert_installed? called on non-OS X!')
+        return false
+      end
+      shell_out(
+        "/usr/bin/security find-certificate -c \"#{cert_name}\" -Z /Library/Keychains/System.keychain",
+      ).exitstatus.zero?
+    end
+
     def macos_package_installed?(pkg_identifier, pkg_version)
-      unless macos?
+      unless node.macos?
         Chef::Log.warn('node.macos_package_installed? called on non-OS X!')
         false
       end
@@ -246,7 +256,7 @@ class Chef
     end
 
     def macos_package_present?(pkg_identifier)
-      unless macos?
+      unless node.macos?
         Chef::Log.warn('node.macos_package_present? called on non-OS X!')
         return false
       end

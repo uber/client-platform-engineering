@@ -13,6 +13,7 @@
 
 base_dir = value_for_platform_family(
   'mac_os_x' => '/Library/Application Support/CrashPlan',
+  'windows' => 'C:\\ProgramData\\CrashPlan',
 )
 
 uninstall_script = value_for_platform_family(
@@ -20,6 +21,7 @@ uninstall_script = value_for_platform_family(
     base_dir,
     'Uninstall.app/Contents/Resources/uninstall.sh',
   ),
+  'windows' => nil,
 )
 
 default['cpe_crashplan'] = {

@@ -52,6 +52,8 @@ class Chef
             end
           # Cache either doesn't exist or isn't fresh
           else
+            # Trigger a sync to kickstart WS1 agent
+            _trigger_sync(hubcli_path)
             ws1_device_attributes = _get_available_ws1_profiles_list(hubcli_path)
           end
 
@@ -100,6 +102,13 @@ class Chef
       end
 
       attributes
+    end
+
+    def _trigger_sync(hubcli_path)
+      if node.macos?
+        # spaces in path, so we need to convert them with gsub
+        shell_out("#{hubcli_path.gsub(/ /, '\ ')} sync")
+      end
     end
 
     def ws1_json_age_over_invalidation?(path_of_file)

@@ -94,7 +94,7 @@ action_class do # rubocop:disable Metrics/BlockLength
   def macos_configure(sal_prefs)
     # Build configuration profile and pass it to cpe_profiles
     prefix = node['cpe_profiles']['prefix']
-    organization = node['organization'] ? node['organization'] : 'Uber' # rubocop:disable  Style/UnneededCondition, Metrics/LineLength
+    organization = node['organization'] ? node['organization'] : 'Uber'
 
     sal_profile = {
       'PayloadIdentifier' => "#{prefix}.sal",
