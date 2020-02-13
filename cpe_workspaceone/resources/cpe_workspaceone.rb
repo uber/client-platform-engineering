@@ -74,6 +74,8 @@ action_class do # rubocop:disable Metrics/BlockLength
           command "#{hubcli_path.gsub(/ /, '\ ')} profiles --install #{profile_id}"
           only_if { node.ws1_hubcli_exists } # non-gsub or guard will fail.
           not_if { node.profile_installed?('ProfileDisplayName', installed_profile_name) }
+          # Only wait two mintues for this command to finish, because something may be up
+          timeout 120
         end
       end
     end

@@ -54,7 +54,7 @@ if node.debian_family?
   end
 elsif node.macos?
   # Don't install Crowdstrike on 10.11 and lower as it's unsupported.
-  if node.os_at_least?(10.12)
+  if node.os_at_least?('10.12')
     {
       'checksum' => '9039f2e654133a4b760c929c724c149aabe8f9315616be5e02e893102'\
       'f77add2',
