@@ -330,6 +330,17 @@ Usage
   end
   ```
 
+  * node.debian_min_package_installed?
+    Returns a boolean value stating whether a specific Debian package is installed with a minimum version
+
+    ```
+    if debian_min_package_installed?('slack-desktop', '4.3.2')
+      do_thing
+    else
+      do_other_thing
+    end
+    ```
+
 * node.write_contents_to_file
   Helper function to write contents to a file
 
