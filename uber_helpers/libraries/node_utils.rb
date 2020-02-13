@@ -351,6 +351,24 @@ class Chef
       Gem::Version.new(installed_pkg_version) <= Gem::Version.new(max_pkg)
     end
 
+    def debian_min_package_installed?(pkg_identifier, pkg_version)
+      unless node.ubuntu?
+        Chef::Log.warn('node.debian_package_installed? called on non-ubuntu system!')
+        false
+      end
+      installed_pkg_version = shell_out(
+        "dpkg -s \"#{pkg_identifier}\"",
+      ).run_command.stdout.to_s[/Version: (.*)/, 1]
+      # Compare the installed version to the maximum version
+      if installed_pkg_version.nil?
+        Chef::Log.warn("Package #{pkg_identifier} returned nil.")
+        false
+      end
+      Gem::Version.new(installed_pkg_version) >= Gem::Version.new(pkg_version)
+    rescue StandardError
+      return false
+    end
+
     def write_contents_to_file(path, contents)
       File.open(path, 'w') { |target_file| target_file.write(contents) }
     end
