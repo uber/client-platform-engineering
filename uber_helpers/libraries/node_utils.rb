@@ -388,5 +388,25 @@ class Chef
       end
       return node.os_at_least?('10.10') && node.os_less_than?('10.11')
     end
+
+    def chef_version
+      node['chef_packages']['chef']['version']
+    end
+
+    def at_least_chef12?
+      at_least?(chef_version, '12.0.0')
+    end
+
+    def at_least_chef13?
+      at_least?(chef_version, '13.0.0')
+    end
+
+    def at_least_chef14?
+      at_least?(chef_version, '14.0.0')
+    end
+
+    def at_least_chef15?
+      at_least?(chef_version, '15.0.0')
+    end
   end
 end
