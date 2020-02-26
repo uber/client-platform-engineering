@@ -162,7 +162,7 @@ action_class do # rubocop:disable Metrics/BlockLength
         next if ws1agent_prefs[key].nil?
         ws1agent_profile['PayloadContent'][0][key] = ws1agent_prefs[key]
         # Double tap the preferences since WS1 agent doesn't use profiles atm. Chef 14+
-        if node.at_least?(node['chef_packages']['chef']['version'], '14.0.0')
+        if node.at_least_chef14?
           macos_userdefaults "Configure com.vmware.hub.agent - #{key}" do
             domain '/Library/Preferences/com.vmware.hub.agent'
             key key

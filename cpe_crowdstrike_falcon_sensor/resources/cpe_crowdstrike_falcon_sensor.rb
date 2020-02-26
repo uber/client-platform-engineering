@@ -116,14 +116,18 @@ action_class do # rubocop:disable Metrics/BlockLength
       'delaying',
     ]
 
-    # Try to load the kernel extension
-    execute 'Force load the kernel extension' do
-      command '/sbin/kextload /Library/CS/kexts/Agent.kext'
+    # Create the directories
+    directory 'Ensure kernel extension permissions' do
+      path '/Library/CS/kexts/Agent.kext'
+      owner root_owner
+      group root_group
+      mode '0755'
       only_if { ::File.exists?('/Library/CS/kexts/Agent.kext') }
-      not_if { kernel_extension_running }
+      recursive true
     end
 
-    # Only try to register the client if the kernel extension is running
+    # Only try to register the client if the license bin file doesn't exist.
+    # The kernel extension wont load until it's registered.
     execute 'Setting Crowdstrike Falcon registration token' do
       command "#{falconctl_path} license #{reg_token}"
       only_if { ::File.exists?(falconctl_path) }
@@ -152,9 +156,7 @@ action_class do # rubocop:disable Metrics/BlockLength
       only_if { ::File.exists?(exe_path) }
       # There technically isn't a falconctl on Windows, so you have to use sc and see if the process is running - if it
       # is, the device is in a good state
-      not_if do
-        check_falcon_agent_status_windows.include?('RUNNING')
-      end
+      not_if { check_falcon_agent_status_windows.include?('RUNNING') }
     end
 
     # Force an upgrade of CrowdStrike on Windows if it's out of date
@@ -182,8 +184,21 @@ action_class do # rubocop:disable Metrics/BlockLength
   end
 
   def macos_manage
-    # TODO: need to write
-    return
+    # Purge the kext staging cache CrowdStrike kext if it's not healthy. Otherwise this could tank chef runs.
+    execute 'Purge kext staging cache' do
+      command '/usr/sbin/kextcache --clear-staging'
+      only_if { ::File.exists?('/Library/CS/kexts/Agent.kext') }
+      only_if { kernel_extension_healthy? == false }
+    end
+
+    # Try to load the kernel extension, but only if it's healthy
+    execute 'Force load the kernel extension' do
+      command '/sbin/kextload /Library/CS/kexts/Agent.kext'
+      only_if { ::File.exists?('/Library/CS/kexts/Agent.kext') }
+      only_if { kernel_extension_healthy? == true }
+      only_if { ::File.exists?('/Library/CS/License.bin') }
+      not_if { kernel_extension_running? }
+    end
   end
 
   def windows_manage
@@ -257,13 +272,11 @@ action_class do # rubocop:disable Metrics/BlockLength
     execute 'Uninstall Crowdstrike Falcon Windows' do
       command "#{exe_path} /quiet"
       only_if { ::File.exists?(exe_path) }
-      only_if do
-        check_falcon_agent_status_windows.include?('RUNNING')
-      end
+      only_if { check_falcon_agent_status_windows.include?('RUNNING') }
     end
   end
 
-  def kernel_extension_running
+  def kernel_extension_running?
     status = false
     if node.macos?
       cmd = shell_out('/usr/sbin/kextstat -b com.crowdstrike.sensor').stdout.to_s
@@ -271,6 +284,19 @@ action_class do # rubocop:disable Metrics/BlockLength
         return status
       else
         status = cmd.include?('com.crowdstrike.sensor')
+      end
+    end
+    status
+  end
+
+  def kernel_extension_healthy?
+    status = false
+    if node.macos?
+      cmd = shell_out('/usr/bin/kextutil /Library/CS/kexts/Agent.kext -n -t')
+      if cmd.nil?
+        return status
+      else
+        status = cmd.exitstatus.zero?
       end
     end
     status
