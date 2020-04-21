@@ -1,5 +1,5 @@
 #
-# Cookbook Name:: uber_helprs
+# Cookbook Name:: uber_helpers
 # Libraries:: win_utils
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2

@@ -9,3 +9,4 @@ chef_version '>= 12.14' if respond_to?(:chef_version)
 
 depends 'cpe_profiles'
 depends 'cpe_utils'
+depends 'uber_helpers'

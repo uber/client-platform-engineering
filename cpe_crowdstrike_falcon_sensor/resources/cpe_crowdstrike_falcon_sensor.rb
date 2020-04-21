@@ -100,6 +100,12 @@ action_class do # rubocop:disable Metrics/BlockLength
   end
 
   def macos_install(falconctl_path, receipt, reg_token)
+    # Force a re-install of CrowdStrike if files are missing
+    execute "/usr/sbin/pkgutil --forget #{receipt}" do
+      not_if { macos_cs_file_integrity_healthy? }
+      not_if { shell_out("/usr/sbin/pkgutil --pkg-info #{receipt}").error? }
+    end
+
     # https://falcon.crowdstrike.com/support/documentation/22/falcon-sensor-for-mac-deployment-guide
     # Install the package
     cpe_remote_pkg 'Crowdstrike Falcon' do
@@ -199,6 +205,17 @@ action_class do # rubocop:disable Metrics/BlockLength
       only_if { ::File.exists?('/Library/CS/License.bin') }
       not_if { kernel_extension_running? }
     end
+
+    # Turn on the launch daemons if they have been turned off
+    [
+      'com.crowdstrike.userdaemon',
+      'com.crowdstrike.falcond',
+    ].each do |daemon|
+      launchd daemon do
+        only_if { ::File.exist?("/Library/LaunchDaemons/#{daemon}.plist") }
+        action :enable
+      end
+    end
   end
 
   def windows_manage
@@ -274,6 +291,23 @@ action_class do # rubocop:disable Metrics/BlockLength
       only_if { ::File.exists?(exe_path) }
       only_if { check_falcon_agent_status_windows.include?('RUNNING') }
     end
+  end
+
+  def macos_cs_file_integrity_healthy?
+    healthy = true
+    # Check for these files to exist and return health check
+    [
+      '/Library/CS/kexts/Agent.kext',
+      '/Library/CS/falconctl',
+      '/Library/CS/falcond',
+      '/Library/LaunchDaemons/com.crowdstrike.userdaemon.plist',
+      '/Library/LaunchDaemons/com.crowdstrike.falcond.plist',
+    ].each do |cs_file|
+      unless ::File.exists?(cs_file)
+        healthy = false
+      end
+    end
+    healthy
   end
 
   def kernel_extension_running?

@@ -19,7 +19,6 @@ action :run do
   zoom_prefs = node['cpe_zoom'].reject { |_k, v| v.nil? }
   prefix = node['cpe_profiles']['prefix']
   organization = node['organization'] || 'Uber'
-  cv = node['chef_packages']['chef']['version']
   zoom_profile = {
     'PayloadIdentifier' => "#{prefix}.zoom",
     'PayloadRemovalDisallowed' => true,
@@ -44,7 +43,7 @@ action :run do
       next if zoom_prefs[key].nil?
       zoom_profile['PayloadContent'][0][key] = zoom_prefs[key]
       # Double tap the preferences since Zoom doesn't use profiles atm. Chef 14+
-      if Gem::Version.new(cv) >= Gem::Version.new('14.0.0')
+      if node.at_least_chef14?
         macos_userdefaults "Configure us.zoom.config - #{key}" do
           domain '/Library/Preferences/us.zoom.config'
           key key

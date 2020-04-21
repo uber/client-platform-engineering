@@ -273,9 +273,7 @@ action_class do # rubocop:disable Metrics/BlockLength
       end
     end
     execute '/usr/sbin/pkgutil --forget com.facebook.osquery' do
-      not_if do
-        shell_out('/usr/sbin/pkgutil --pkg-info com.facebook.osquery').error?
-      end
+      not_if { shell_out('/usr/sbin/pkgutil --pkg-info com.facebook.osquery').error? }
     end
   end
 

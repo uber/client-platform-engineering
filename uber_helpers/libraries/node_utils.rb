@@ -1,5 +1,5 @@
 #
-# Cookbook Name:: uber_helprs
+# Cookbook Name:: uber_helpers
 # Libraries:: node_utils
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
@@ -145,6 +145,10 @@ class Chef
       Date.today > Date.parse(date)
     end
 
+    def delete_file(path_of_file)
+      ::File.delete(path_of_file) if ::File.exist?(path_of_file)
+    end
+
     def el_capitan?
       unless node.macos?
         Chef::Log.warn('node.el_capitan? called on non-OS X!')
@@ -154,16 +158,17 @@ class Chef
     end
 
     def file_age_over_24_hours?(path_of_file)
-      @file_age_over_24_hours ||=
-        begin
-          age_length = false
-          if ::File.exist?(path_of_file)
-            file_modified_time = File.mtime(path_of_file).to_date
-            diff_time = (Date.today - file_modified_time).to_i
-            age_length = diff_time > 1
-          end
-          age_length
-        end
+      file_age_over?(path_of_file, 86400)
+    end
+
+    def file_age_over?(path_of_file, seconds)
+      age_length = false
+      if ::File.exist?(path_of_file)
+        file_modified_time = File.mtime(path_of_file).to_i
+        diff_time = Time.now.to_i - file_modified_time
+        age_length = diff_time > seconds
+      end
+      age_length
     end
 
     def greater_than?(version1, version2)
