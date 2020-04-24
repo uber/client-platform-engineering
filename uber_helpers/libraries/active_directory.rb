@@ -14,7 +14,7 @@
 class Chef
   class Node
     def _can_query_ad?(domain_hostname, ldaps_domain_hostname)
-      ad_bound?(domain_hostname) && ad_reachable?(ldaps_domain_hostname)
+      ad_bound?(domain_hostname) && connection_reachable?(ldaps_domain_hostname)
     end
 
     def ad_bound?(domain_hostname)
@@ -39,27 +39,6 @@ class Chef
         else
           status = cmd.exitstatus.zero?
         end
-      end
-      status
-    end
-
-    def ad_reachable?(ldaps_domain_hostname)
-      status = false
-      if node.macos?
-        cmd = shell_out("/sbin/ping #{ldaps_domain_hostname} -c 1")
-      elsif node.windows?
-        powershell_cmd = "Test-Connection #{ldaps_domain_hostname} -Count 1 -Quiet"
-        cmd = powershell_out(powershell_cmd)
-      end
-      if cmd.stdout.nil? || cmd.stdout.empty?
-        return status
-      elsif node.macos?
-        # If connected, will return 0, timeout is 68.
-        status = cmd.exitstatus.zero?
-      elsif node.windows?
-        # Powershell returns a string of True/False, which ruby can't natively handle, so we downcase everything and use
-        # JSON library to convert it to a BOOL.
-        status = Chef::JSONCompat.parse(cmd.stdout.chomp.downcase)
       end
       status
     end
