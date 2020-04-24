@@ -501,7 +501,7 @@ class Chef
         # -w timeout in seconds when connection is made
         cmd = shell_out("/usr/bin/nc -G 1 -w 0 #{destination} #{port}")
       end
-      if cmd.stdout.nil? || cmd.stdout.empty?
+      if cmd.stdout.nil?
         return status
       elsif node.macos?
         # If connected, will return 0, timeout is 68.
