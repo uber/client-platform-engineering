@@ -493,7 +493,7 @@ class Chef
       status
     end
 
-    def port_open?(destination, port, timeout)
+    def port_open?(destination, port, timeout = 1)
       socket = Socket.new(:INET, :STREAM)
       # This will fail if DNS cannot resolve
       begin
