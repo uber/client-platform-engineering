@@ -163,7 +163,10 @@ class Chef
 
     def file_age_over?(path_of_file, seconds)
       age_length = false
-      if ::File.exist?(path_of_file)
+      if path_of_file.nil?
+        Chef::Log.warn('node.file_age_over - cannot determine path')
+        return age_length
+      elsif ::File.exist?(path_of_file)
         file_modified_time = File.mtime(path_of_file).to_i
         diff_time = Time.now.to_i - file_modified_time
         age_length = diff_time > seconds
@@ -490,24 +493,27 @@ class Chef
       status
     end
 
-    def port_open?(destination, port)
-      unless node.macos?
-        Chef::Log.warn('node.port_open? called on non-macOS device!')
+    def port_open?(destination, port, timeout)
+      socket = Socket.new(:INET, :STREAM)
+      # This will fail if DNS cannot resolve
+      begin
+        remote_addr = Socket.sockaddr_in(port, destination)
+      rescue SocketError
         return false
       end
-      status = false
-      if node.macos?
-        # -G timeout in seconds when connection isn't made
-        # -w timeout in seconds when connection is made
-        cmd = shell_out("/usr/bin/nc -G 1 -w 0 #{destination} #{port}")
+      # Forced rescue as this always fails
+      # rubocop:disable Lint/HandleExceptions
+      begin
+        socket.connect_nonblock(remote_addr)
+      rescue Errno::EINPROGRESS
       end
-      if cmd.stdout.nil?
-        return status
-      elsif node.macos?
-        # If connected, will return 0, timeout is 68.
-        status = cmd.exitstatus.zero?
+      # rubocop:enable Lint/HandleExceptions
+      sockets = IO.select(nil, [socket], nil, timeout)[1]
+      if sockets
+        true
+      else
+        false
       end
-      status
     end
   end
 end
