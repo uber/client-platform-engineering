@@ -163,7 +163,10 @@ class Chef
 
     def file_age_over?(path_of_file, seconds)
       age_length = false
-      if ::File.exist?(path_of_file)
+      if path_of_file.nil?
+        Chef::Log.warn('node.file_age_over - cannot determine path')
+        return age_length
+      elsif ::File.exist?(path_of_file)
         file_modified_time = File.mtime(path_of_file).to_i
         diff_time = Time.now.to_i - file_modified_time
         age_length = diff_time > seconds
@@ -412,6 +415,105 @@ class Chef
 
     def at_least_chef15?
       at_least?(chef_version, '15.0.0')
+    end
+
+    def powershell_package_provider?(pkg_identifier)
+      status = false
+      unless node.windows?
+        Chef::Log.warn('node.powershell_package_provider? called on non-windows device!')
+        return false
+      end
+      require 'chef/mixin/powershell_out'
+      powershell_cmd = "(Get-PackageProvider -Name \"#{pkg_identifier}\").Name -eq \"#{pkg_identifier}\" | "\
+      'ConvertTo-Json'
+      cmd = powershell_out(powershell_cmd).stdout.chomp.strip
+      if cmd.nil? || cmd.empty?
+        return status
+      else
+        status = Chef::JSONCompat.parse(cmd)
+      end
+      status
+    end
+
+    def powershell_module?(pkg_identifier)
+      status = false
+      unless node.windows?
+        Chef::Log.warn('node.powershell_module_installed? called on non-windows device!')
+        return false
+      end
+      require 'chef/mixin/powershell_out'
+      powershell_cmd = "(Get-InstalledModule -Name \"#{pkg_identifier}\").Name -eq \"#{pkg_identifier}\" | "\
+      'ConvertTo-Json'
+      cmd = powershell_out(powershell_cmd).stdout.chomp.strip
+      if cmd.nil? || cmd.empty?
+        return status
+      else
+        status = Chef::JSONCompat.parse(cmd)
+      end
+      status
+    end
+
+    def dell_hw?
+      unless node.windows?
+        Chef::Log.warn('node.dell_hw? called on non-windows device!')
+        return false
+      end
+      require 'chef/mixin/powershell_out'
+      powershell_cmd = '(Get-CimInstance -ClassName Win32_ComputerSystem).Manufacturer'
+      cmd = powershell_out(powershell_cmd).stdout.to_s
+      if cmd.include?('Dell')
+        return true
+      else
+        return false
+      end
+    end
+
+    def connection_reachable?(destination)
+      unless node.macos? || node.windows?
+        Chef::Log.warn('node.connection_reachable? called on non-macOS/windows device!')
+        return false
+      end
+      status = false
+      if node.macos?
+        cmd = shell_out("/sbin/ping #{destination} -c 1")
+      elsif node.windows?
+        powershell_cmd = "Test-Connection #{ldestination} -Count 1 -Quiet"
+        cmd = powershell_out(powershell_cmd)
+      end
+      if cmd.stdout.nil? || cmd.stdout.empty?
+        return status
+      elsif node.macos?
+        # If connected, will return 0, timeout is 68.
+        status = cmd.exitstatus.zero?
+      elsif node.windows?
+        # Powershell returns a string of True/False, which ruby can't natively handle, so we downcase everything and use
+        # JSON library to convert it to a BOOL.
+        status = Chef::JSONCompat.parse(cmd.stdout.chomp.downcase)
+      end
+      status
+    end
+
+    def port_open?(destination, port, timeout = 1)
+      socket = Socket.new(:INET, :STREAM)
+      # This will fail if DNS cannot resolve
+      begin
+        remote_addr = Socket.sockaddr_in(port, destination)
+      rescue SocketError
+        return false
+      end
+      # Forced rescue as this always fails
+      # rubocop:disable Lint/HandleExceptions
+      begin
+        socket.connect_nonblock(remote_addr)
+      rescue Errno::EINPROGRESS
+      end
+      # rubocop:enable Lint/HandleExceptions
+      sockets = IO.select(nil, [socket], nil, timeout)[1]
+      if sockets
+        true
+      else
+        false
+      end
     end
   end
 end
