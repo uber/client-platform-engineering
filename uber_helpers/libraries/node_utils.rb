@@ -477,7 +477,7 @@ class Chef
       if node.macos?
         cmd = shell_out("/sbin/ping #{destination} -c 1")
       elsif node.windows?
-        powershell_cmd = "Test-Connection #{ldestination} -Count 1 -Quiet"
+        powershell_cmd = "Test-Connection #{destination} -Count 1 -Quiet"
         cmd = powershell_out(powershell_cmd)
       end
       if cmd.stdout.nil? || cmd.stdout.empty?
