@@ -424,13 +424,12 @@ class Chef
         return false
       end
       require 'chef/mixin/powershell_out'
-      powershell_cmd = "(Get-PackageProvider -Name \"#{pkg_identifier}\").Name -eq \"#{pkg_identifier}\" | "\
-      'ConvertTo-Json'
-      cmd = powershell_out(powershell_cmd).stdout.chomp.strip
+      powershell_cmd = '(Get-PackageProvider -WarningAction SilentlyContinue).Name | ConvertTo-Json'
+      cmd = powershell_out(powershell_cmd).stdout.to_s
       if cmd.nil? || cmd.empty?
         return status
       else
-        status = Chef::JSONCompat.parse(cmd)
+        status = Chef::JSONCompat.parse(cmd).include?(pkg_identifier)
       end
       status
     end
@@ -494,22 +493,25 @@ class Chef
     end
 
     def port_open?(destination, port, timeout = 1)
-      socket = Socket.new(:INET, :STREAM)
-      # This will fail if DNS cannot resolve
       begin
-        remote_addr = Socket.sockaddr_in(port, destination)
+        socket = Socket.tcp(destination, port, :connect_timeout => timeout)
+      rescue Errno::ETIMEDOUT
+        Chef::Log.warn("node.port_open? #{destination} timed out")
+        return false
       rescue SocketError
+        Chef::Log.warn("node.port_open? cannot resolve #{destination}")
+        return false
+      rescue Errno::ECONNREFUSED
+        Chef::Log.warn("node.port_open? #{destination} connection refused")
+        return false
+      rescue Errno::EHOSTUNREACH
+        Chef::Log.warn("node.port_open? #{destination} host unreachable")
         return false
       end
-      # Forced rescue as this always fails
-      # rubocop:disable Lint/HandleExceptions
-      begin
-        socket.connect_nonblock(remote_addr)
-      rescue Errno::EINPROGRESS
-      end
-      # rubocop:enable Lint/HandleExceptions
-      sockets = IO.select(nil, [socket], nil, timeout)[1]
-      if sockets
+      if socket
+        unless socket.closed?
+          socket.close
+        end
         true
       else
         false
