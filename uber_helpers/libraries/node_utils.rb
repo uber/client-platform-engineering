@@ -417,6 +417,10 @@ class Chef
       at_least?(chef_version, '15.0.0')
     end
 
+    def at_least_chef16?
+      at_least?(chef_version, '16.0.0')
+    end
+
     def powershell_package_provider?(pkg_identifier)
       status = false
       unless node.windows?
@@ -490,6 +494,61 @@ class Chef
         status = Chef::JSONCompat.parse(cmd.stdout.chomp.downcase)
       end
       status
+    end
+
+    def macos_os_sub_version
+      @macos_os_sub_version ||=
+        begin
+          unless node.macos?
+            Chef::Log.warn('node.macos_os_sub_version called on non-OS X!')
+            return '0'
+          end
+          cmd = shell_out('/usr/sbin/sysctl -n kern.osversion').run_command.stdout
+          if cmd.nil?
+            Chef::Log.warn('node.macos_os_sub_version returned nil')
+            return '0'
+          end
+          cmd.strip
+        end
+    end
+
+    def macos_mutate_version(version)
+      # This is stupid, but it works from 10.7 and higher (to date), so this is
+      # _likely_ safe.
+      # Split the version first - 19F101 becomes ["19", "F", "101"]
+      # Reject blank values: 19F101FF would otherwise be ["19", "F", "101", "F", "", "F"]
+      split_version = version.split(/([a-z]|[A-Z])/).reject(&:empty?)
+      # Join the list with dots and replace letters with numbers
+      # ["19", "F", "101"] => 19.F.101 => 19.5.101
+      split_version.join('.').tr('ABCDEFGHIJ', '0123456789')
+    end
+
+    def mac_os_sub_version_at_least?(version)
+      Gem::Version.new(macos_mutate_version(macos_os_sub_version)) >= Gem::Version.new(macos_mutate_version(version))
+    rescue ArgumentError
+      Chef::Log.warn('node.mac_os_sub_version_at_least? given a malformed version')
+      return false
+    end
+
+    def mac_os_sub_version_at_least_or_lower?(version)
+      Gem::Version.new(macos_mutate_version(macos_os_sub_version)) <= Gem::Version.new(macos_mutate_version(version))
+    rescue ArgumentError
+      Chef::Log.warn('node.mac_os_sub_version_at_least_or_lower? given a malformed version')
+      return false
+    end
+
+    def mac_os_sub_version_greater_than?(version)
+      Gem::Version.new(macos_mutate_version(macos_os_sub_version)) > Gem::Version.new(macos_mutate_version(version))
+    rescue ArgumentError
+      Chef::Log.warn('node.mac_os_sub_version_greater_than? given a malformed version')
+      return false
+    end
+
+    def mac_os_sub_version_less_than?(version)
+      Gem::Version.new(macos_mutate_version(macos_os_sub_version)) < Gem::Version.new(macos_mutate_version(version))
+    rescue ArgumentError
+      Chef::Log.warn('node.mac_os_sub_version_less_than? given a malformed version')
+      return false
     end
 
     def port_open?(destination, port, timeout = 1)
