@@ -11,7 +11,7 @@
 # LICENSE file in the root directory of this source tree.
 #
 
-return unless node.macos?
+return unless node.macos? || node.windows?
 
 base_dir = value_for_platform_family(
   'mac_os_x' => '/Library/Application Support/CrashPlan',

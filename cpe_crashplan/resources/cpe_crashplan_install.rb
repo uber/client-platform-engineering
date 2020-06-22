@@ -12,7 +12,7 @@
 #
 
 resource_name :cpe_crashplan_install
-provides :cpe_crashplan_install, :os => 'darwin'
+provides :cpe_crashplan_install
 default_action :manage
 
 action :manage do
@@ -111,20 +111,24 @@ action_class do
   end
 
   def install
+    mac_os_x_install if node.macos?
+    windows_install if node.windows?
+  end
+
+  def mac_os_x_install
     return unless node.macos?
+
+    # Do not do upgrades anymore because it's not officially supported
+    return if node.macos_package_present?('com.crashplan.app.pkg')
 
     installed = node.macos_package_installed?(
       'com.crashplan.app.pkg',
-      1,
+      '8.0.0',
     )
 
     upgrade_needed = upgrade_crashplan? if node.macos?
     return if installed && !upgrade_needed # Already installed and correct ver
 
-    mac_os_x_install(upgrade_needed) if node.macos?
-  end
-
-  def mac_os_x_install(upgrade_needed)
     cp = node['cpe_crashplan'].reject { |_k, v| v.nil? }
 
     # Start upgrade only proceedures
@@ -154,13 +158,60 @@ action_class do
     end
 
     # run configuration tasks
-    configure if node.macos?
+    configure
 
     # Download and install CrashPlan
     cpe_remote_pkg 'crashplan' do
       app cp['pkg']['app_name']
       version cp['pkg']['version']
       checksum cp['pkg']['checksum']
+    end
+  end
+
+  def windows_install
+    return unless node.windows?
+    cp = node['cpe_crashplan'].reject { |_k, v| v.nil? }
+
+    # Do not do upgrades anymore because it's not officially supported
+    return if ::File.exists?('C:\\Program Files\\CrashPlan\\CrashPlanService.exe')
+
+    # Created directory for property files
+    directory "create #{cp['pkg']['base_path']} directory" do
+      path  cp['pkg']['base_path']
+      owner root_owner
+      group root_group
+      mode  '0755'
+      action :create
+    end
+    # run configuration tasks
+    configure
+    version = cp['pkg']['version']
+    file_name = "#{cp['pkg']['app_name']}-#{version}.msi"
+    # Convert path to a safe Windows folder. This is needed so msiexec does not
+    # blow up.
+    msi_path = UberHelpers::WinUtils.friendly_path(
+      ::File.join(Chef::Config[:file_cache_path], file_name),
+    )
+    cpe_remote_file cp['pkg']['app_name'] do
+      backup 1
+      file_name file_name
+      checksum cp['pkg']['checksum']
+      path msi_path
+      mode '0644'
+    end
+    cmd = "msiexec /i #{msi_path} "\
+    'CP_ARGS="'\
+    "DEPLOYMENT_URL=#{cp['config']['url']}&"\
+    "DEPLOYMENT_POLICY_TOKEN=#{cp['config']['policy_token']}\" "\
+    'CP_SILENT=true '\
+    'DEVICE_CLOAKED=true '\
+    '/norestart '\
+    '/qn'
+    # Install the package and enroll with company information
+    execute 'Install CrashPlan Windows' do
+      command cmd
+      only_if { ::File.exists?(msi_path) }
+      not_if { ::File.exists?('C:\\Program Files\\CrashPlan\\CrashPlanService.exe') }
     end
   end
 
