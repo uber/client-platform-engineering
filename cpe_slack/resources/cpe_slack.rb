@@ -12,6 +12,8 @@
 #
 
 resource_name :cpe_slack
+provides :cpe_slack, :os => 'darwin'
+
 default_action :config
 
 # Enforce Slack Settings

@@ -13,6 +13,7 @@
 
 resource_name :cpe_umad_agents
 provides :cpe_umad_agents, :os => 'darwin'
+
 default_action :manage
 
 action :manage do

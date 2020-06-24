@@ -12,7 +12,8 @@
 #
 
 resource_name :cpe_chef_handlers
-provides :cpe_chef_handlers
+provides :cpe_chef_handlers, :os => ['darwin', 'linux', 'windows']
+
 default_action :manage
 
 action :manage do

@@ -12,6 +12,8 @@
 #
 
 resource_name :cpe_uiagent
+provides :cpe_uiagent, :os => 'darwin'
+
 default_action :run
 
 action :run do

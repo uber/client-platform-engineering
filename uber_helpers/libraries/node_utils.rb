@@ -129,6 +129,14 @@ class Chef
       return node.os_at_least?('10.15') && node.os_less_than?('10.16')
     end
 
+    def big_sur?
+      unless node.macos?
+        Chef::Log.warn('node.big_sur? called on non-macOS!')
+        return
+      end
+      return node.os_at_least?('10.16') && node.os_less_than?('10.17')
+    end
+
     def console_user_debian
       unless node.debian_family?
         Chef::Log.warn('node.console_user_debian called on non-Debian!')

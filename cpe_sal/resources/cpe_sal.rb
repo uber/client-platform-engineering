@@ -12,7 +12,8 @@
 #
 
 resource_name :cpe_sal
-provides :cpe_sal
+provides :cpe_sal, :os => ['darwin', 'windows']
+
 default_action :manage
 
 action :manage do

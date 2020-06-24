@@ -11,4 +11,6 @@
 # LICENSE file in the root directory of this source tree.
 #
 
+return unless node.macos? || node.ubuntu?
+
 cpe_shims 'Configure and install shims'

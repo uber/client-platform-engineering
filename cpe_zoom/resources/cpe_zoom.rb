@@ -12,6 +12,8 @@
 #
 
 resource_name :cpe_zoom
+provides :cpe_zoom, :os => 'darwin'
+
 default_action :run
 
 # Enforce Zoom Settings

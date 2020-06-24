@@ -12,7 +12,8 @@
 #
 
 resource_name :cpe_filebeat
-provides :cpe_filebeat
+provides :cpe_filebeat, :os => ['darwin', 'linux', 'windows']
+
 default_action :manage
 
 action :manage do

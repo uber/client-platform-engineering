@@ -12,7 +12,8 @@
 #
 
 resource_name :cpe_chefctl
-provides :cpe_chefctl
+provides :cpe_chefctl, :os => ['darwin', 'linux', 'windows']
+
 default_action :manage
 
 action :manage do

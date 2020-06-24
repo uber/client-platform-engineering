@@ -12,7 +12,8 @@
 #
 
 resource_name :cpe_crashplan_install
-provides :cpe_crashplan_install
+provides :cpe_crashplan_install, :os => ['darwin', 'windows']
+
 default_action :manage
 
 action :manage do

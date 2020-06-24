@@ -12,7 +12,8 @@
 #
 
 resource_name :cpe_crowdstrike_falcon_sensor
-provides :cpe_crowdstrike_falcon_sensor
+provides :cpe_crowdstrike_falcon_sensor, :os => ['darwin', 'linux', 'windows']
+
 default_action :manage
 
 action :manage do

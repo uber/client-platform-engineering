@@ -12,6 +12,8 @@
 #
 
 resource_name :cpe_notificationsettings
+provides :cpe_notificationsettings, :os => 'darwin'
+
 default_action :config
 
 action :config do

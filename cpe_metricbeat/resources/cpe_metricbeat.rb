@@ -12,7 +12,8 @@
 #
 
 resource_name :cpe_metricbeat
-provides :cpe_metricbeat
+provides :cpe_metricbeat, :os => ['darwin', 'linux', 'windows']
+
 default_action :manage
 
 action :manage do
