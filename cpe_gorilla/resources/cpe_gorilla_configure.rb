@@ -13,6 +13,7 @@
 
 resource_name :cpe_gorilla_configure
 provides :cpe_gorilla_configure, :os => 'windows'
+
 default_action :manage
 
 action :manage do

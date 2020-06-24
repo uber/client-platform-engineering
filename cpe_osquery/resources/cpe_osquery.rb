@@ -12,7 +12,8 @@
 #
 
 resource_name :cpe_osquery
-provides :cpe_osquery
+provides :cpe_osquery, :os => ['darwin', 'linux', 'windows']
+
 default_action :manage
 
 action :manage do

@@ -12,7 +12,8 @@
 #
 
 resource_name :cpe_chefclient
-provides :cpe_chefclient
+provides :cpe_chefclient, :os => ['darwin', 'linux', 'windows']
+
 default_action :manage
 
 action :manage do

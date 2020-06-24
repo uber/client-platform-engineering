@@ -13,6 +13,7 @@
 
 resource_name :cpe_nudge_install
 provides :cpe_nudge_install, :os => 'darwin'
+
 default_action :manage
 
 action :manage do

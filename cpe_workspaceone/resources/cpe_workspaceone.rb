@@ -12,7 +12,8 @@
 #
 
 resource_name :cpe_workspaceone
-provides :cpe_workspaceone
+provides :cpe_workspaceone, :os => 'darwin'
+
 default_action :manage
 
 action :manage do

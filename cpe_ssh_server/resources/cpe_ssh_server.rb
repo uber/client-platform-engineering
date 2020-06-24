@@ -12,7 +12,8 @@
 #
 
 resource_name :cpe_ssh_server
-provides :cpe_ssh_server, :platform => 'mac_os_x'
+provides :cpe_ssh_server, :os => 'darwin'
+
 default_action :manage
 
 action :manage do
