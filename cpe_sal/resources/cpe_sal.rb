@@ -97,29 +97,43 @@ action_class do # rubocop:disable Metrics/BlockLength
     prefix = node['cpe_profiles']['prefix']
     organization = node['organization'] ? node['organization'] : 'Uber'
 
-    sal_profile = {
-      'PayloadIdentifier' => "#{prefix}.sal",
-      'PayloadRemovalDisallowed' => true,
-      'PayloadScope' => 'System',
-      'PayloadType' => 'Configuration',
-      'PayloadUUID' => '1c03dd17-d2d7-4a68-be40-f41bea3642a9',
-      'PayloadOrganization' => organization,
-      'PayloadVersion' => 1,
-      'PayloadDisplayName' => 'Sal',
-      'PayloadContent' => [],
-    }
-    sal_profile['PayloadContent'].push(
-      'PayloadType' => 'com.github.salopensource.sal',
-      'PayloadVersion' => 1,
-      'PayloadIdentifier' => "#{prefix}.sal",
-      'PayloadUUID' => 'e33adee2-4a19-4e69-a330-461920ec8279',
-      'PayloadEnabled' => true,
-      'PayloadDisplayName' => 'Sal',
-    )
-    sal_prefs.each do |k, v|
-      sal_profile['PayloadContent'][0][k] = v
+    if node.os_at_least_or_lower?('10.15.99')
+      sal_profile = {
+        'PayloadIdentifier' => "#{prefix}.sal",
+        'PayloadRemovalDisallowed' => true,
+        'PayloadScope' => 'System',
+        'PayloadType' => 'Configuration',
+        'PayloadUUID' => '1c03dd17-d2d7-4a68-be40-f41bea3642a9',
+        'PayloadOrganization' => organization,
+        'PayloadVersion' => 1,
+        'PayloadDisplayName' => 'Sal',
+        'PayloadContent' => [],
+      }
+      sal_profile['PayloadContent'].push(
+        'PayloadType' => 'com.github.salopensource.sal',
+        'PayloadVersion' => 1,
+        'PayloadIdentifier' => "#{prefix}.sal",
+        'PayloadUUID' => 'e33adee2-4a19-4e69-a330-461920ec8279',
+        'PayloadEnabled' => true,
+        'PayloadDisplayName' => 'Sal',
+      )
+      sal_prefs.each do |k, v|
+        sal_profile['PayloadContent'][0][k] = v
+      end
+      node.default['cpe_profiles']["#{prefix}.sal"] = sal_profile
+    else
+      # Profiles are dead on macOS Big sur and later, so use defaults write
+      sal_prefs.each_key do |key|
+        next if sal_prefs[key].nil?
+        if node.at_least_chef14?
+          macos_userdefaults "Configure Sal - #{key}" do
+            domain '/Library/Preferences/com.github.salopensource.sal'
+            key key
+            value sal_prefs[key]
+          end
+        end
+      end
     end
-    node.default['cpe_profiles']["#{prefix}.sal"] = sal_profile
 
     # Make sure the launchds are always loaded if present
     CPE::Sal.launchds.each do |d|
