@@ -19,6 +19,10 @@ default_action :config
 # Enforce Slack Settings
 action :config do
   slack_prefs = node['cpe_slack'].reject { |_k, v| v.nil? }
+  if slack_prefs.empty?
+    Chef::Log.info("#{cookbook_name}: No prefs found.")
+    return
+  end
   prefix = node['cpe_profiles']['prefix']
   organization = node['organization'] || 'Uber'
   slack_profile = {

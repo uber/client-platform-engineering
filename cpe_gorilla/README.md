@@ -22,6 +22,11 @@ This cookbook assumes that you are installing the executable (.exe) version of G
 
 You can find executable releases of Gorilla [here](https://github.com/1dustindavis/gorilla/releases)
 
+By default, we assign a manifest for a given role (i.e. dev, qa, production) node['cpe_gorilla']['preferences']['manifest'] => 'dev'.
+A manifest defines the list of applications which should be installed for a given role.
+
+Individual or group-based installs can be pushed ad-hoc by using the local manifest (e.g. node['cpe_gorilla']['local_manifest']['managed_installs'] << 'some_application')
+
 
 Attributes
 ----------
@@ -32,6 +37,7 @@ Attributes
 * node['cpe_gorilla']['preferences']
 * node['cpe_gorilla']['task']
 * node['cpe_gorilla']['uninstall']
+* node['cpe_gorilla']['local_manifest']
 
 For an authoritative list of preferences, please see [Gorilla's Client Configuration](https://github.com/1dustindavis/gorilla/wiki/Client-Configuration)
 

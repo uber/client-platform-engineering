@@ -25,4 +25,5 @@ default['cpe_gorilla'] = {
     'seconds_random_delay' => '1200', # must be a string
   },
   'uninstall' => false,
+  'local_manifest' => {},
 }

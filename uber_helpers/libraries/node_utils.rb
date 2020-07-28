@@ -134,7 +134,7 @@ class Chef
         Chef::Log.warn('node.big_sur? called on non-macOS!')
         return
       end
-      return node.os_at_least?('10.16') && node.os_less_than?('10.17')
+      return node.os_at_least?('11.0') || (node.os_at_least?('10.16') && node.os_less_than?('10.17'))
     end
 
     def console_user_debian
@@ -583,6 +583,21 @@ class Chef
       else
         false
       end
+    end
+
+    def distinguished_name?(ou_identifier)
+      status = false
+      unless node.windows? || node.macos?
+        Chef::Log.warn('node.distinguished_name? called on non-windows or macos device!')
+        return false
+      end
+      dn = node.machine['distinguishedName']
+      if dn.nil? || dn.empty?
+        return status
+      else
+        status = dn.include?(ou_identifier)
+      end
+      return status
     end
   end
 end
