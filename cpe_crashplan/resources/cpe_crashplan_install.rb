@@ -45,6 +45,19 @@ action_class do
         user 'root'
         action :delete
       end
+    when 'windows'
+      windows_service 'Code42 CrashPlan Service' do
+        action :stop
+      end
+
+      windows_package 'Code42 CrashPlan' do
+        action :remove
+      end
+
+      directory node['cpe_crashplan']['pkg']['base_path'] do
+        recursive true
+        action :delete
+      end
     end
   end
 
