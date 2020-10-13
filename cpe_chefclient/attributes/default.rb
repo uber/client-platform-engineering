@@ -18,5 +18,6 @@ default['cpe_chefclient'] = {
   'configure' => false,
   'unmanage' => false,
   'path' => chefdir,
+  'run_list' => {},
   'config' => {},
 }

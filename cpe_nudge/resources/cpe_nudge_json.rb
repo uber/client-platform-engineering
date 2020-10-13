@@ -13,6 +13,7 @@
 
 resource_name :cpe_nudge_json
 provides :cpe_nudge_json, :os => 'darwin'
+
 default_action :manage
 
 action :manage do

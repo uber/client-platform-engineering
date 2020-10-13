@@ -12,7 +12,8 @@
 #
 
 resource_name :cpe_metricbeat
-provides :cpe_metricbeat
+provides :cpe_metricbeat, :os => ['darwin', 'linux', 'windows']
+
 default_action :manage
 
 action :manage do
@@ -85,9 +86,7 @@ action_class do # rubocop:disable Metrics/BlockLength
     if node.macos?
       launchd service_name do
         action :nothing
-        only_if do
-          ::File.exist?("/Library/LaunchDaemons/#{service_name}.plist")
-        end
+        only_if { ::File.exist?("/Library/LaunchDaemons/#{service_name}.plist") }
         subscribes :restart, 'cpe_remote_zip[metricbeat_zip]'
       end
     end

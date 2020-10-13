@@ -13,6 +13,7 @@
 
 resource_name :cpe_apple_caching
 provides :cpe_apple_caching, :os => 'darwin'
+
 default_action :manage
 
 action :manage do

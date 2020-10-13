@@ -9,7 +9,8 @@
 #
 
 resource_name :cpe_environment_zsh
-provides :cpe_environment_zsh
+provides :cpe_environment_zsh, :os => ['darwin', 'linux']
+
 default_action :manage
 
 action :manage do

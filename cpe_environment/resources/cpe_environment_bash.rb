@@ -9,7 +9,8 @@
 #
 
 resource_name :cpe_environment_bash
-provides :cpe_environment_bash
+provides :cpe_environment_bash, :os => ['darwin', 'linux']
+
 default_action :manage
 
 action :manage do

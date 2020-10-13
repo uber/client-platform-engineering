@@ -44,8 +44,8 @@ cpe_remote_pkg 'umad_python' do
   receipt 'com.org.pkg.umad.python'
 end
 # Setup cpe_umad
-node.default['cpe_umad']'python_path'] = '/Library/cpe/frameworks/Python.framework'
-node.default['cpe_umad']['shebang'] = '#!/Library/cpe/frameworks/Python.framework/Versions/3.8/bin/python3'
+node.default['cpe_umad']'python_path'] = '/Library/ManagedFrameworks/Python/Python3.framework'
+node.default['cpe_umad']['shebang'] = '#!/Library/ManagedFrameworks/Python/Python3.framework/Versions/Current/bin/python3'
 ```
 
 Usage

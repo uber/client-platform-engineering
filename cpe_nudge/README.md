@@ -40,8 +40,8 @@ cpe_remote_pkg 'nudge_python' do
   receipt 'com.org.pkg.nudge.python'
 end
 # Setup cpe_nudge
-node.default['cpe_nudge']'python_path'] = '/Library/cpe/frameworks/Python.framework'
-node.default['cpe_nudge']['shebang'] = '#!/Library/cpe/frameworks/Python.framework/Versions/3.8/bin/python3'
+node.default['cpe_nudge']'python_path'] = '/Library/ManagedFrameworks/Python/Python3.framework'
+node.default['cpe_nudge']['shebang'] = '#!/Library/ManagedFrameworks/Python/Python3.framework/Versions/Current/bin/python3'
 ```
 
 Usage

@@ -12,7 +12,8 @@
 #
 
 resource_name :cpe_workspaceone
-provides :cpe_workspaceone
+provides :cpe_workspaceone, :os => 'darwin'
+
 default_action :manage
 
 action :manage do
@@ -132,6 +133,8 @@ action_class do # rubocop:disable Metrics/BlockLength
           command node.hubcli_cmd("profiles --install #{profile_id}")
           only_if { node.ws1_hubcli_exists } # non-gsub or guard will fail.
           not_if { node.user_profile_installed?('ProfileDisplayName', installed_profile_name) }
+          # Only wait two mintues for this command to finish, because something may be up
+          timeout 120
         end
       end
     end
@@ -172,32 +175,10 @@ action_class do # rubocop:disable Metrics/BlockLength
 
   def macos_manage
     ws1agent_prefs = node['cpe_workspaceone']['prefs'].reject { |_k, v| v.nil? }
-    prefix = node['cpe_profiles']['prefix']
-    organization = node['organization'] || 'Uber'
-    ws1agent_profile = {
-      'PayloadIdentifier' => "#{prefix}.ws1",
-      'PayloadRemovalDisallowed' => true,
-      'PayloadScope' => 'System',
-      'PayloadType' => 'Configuration',
-      'PayloadUUID' => '605A10E6-9068-4DAA-9AE0-5334E4D49143',
-      'PayloadOrganization' => organization,
-      'PayloadVersion' => 1,
-      'PayloadDisplayName' => 'Workspace One',
-      'PayloadContent' => [],
-    }
     unless ws1agent_prefs.empty?
-      ws1agent_profile['PayloadContent'].push(
-        'PayloadType' => 'com.vmware.hub.agent',
-        'PayloadVersion' => 1,
-        'PayloadIdentifier' => "#{prefix}.ws1",
-        'PayloadUUID' => 'A37C4F5A-07F8-4E66-BA20-9EB808EB3E3D',
-        'PayloadEnabled' => true,
-        'PayloadDisplayName' => 'Workspace One',
-      )
       ws1agent_prefs.each_key do |key|
         next if ws1agent_prefs[key].nil?
-        ws1agent_profile['PayloadContent'][0][key] = ws1agent_prefs[key]
-        # Double tap the preferences since WS1 agent doesn't use profiles atm. Chef 14+
+        # WS1 agent doesn't use profiles atm. Chef 14+
         if node.at_least_chef14?
           macos_userdefaults "Configure com.vmware.hub.agent - #{key}" do
             domain '/Library/Preferences/com.vmware.hub.agent'
@@ -207,9 +188,6 @@ action_class do # rubocop:disable Metrics/BlockLength
         end
       end
     end
-    node.default['cpe_profiles']["#{prefix}.ws1"] = ws1agent_profile
-
-    manage_cli_config
   end
 
   def uninstall

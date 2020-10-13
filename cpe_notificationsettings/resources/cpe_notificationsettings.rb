@@ -12,11 +12,13 @@
 #
 
 resource_name :cpe_notificationsettings
+provides :cpe_notificationsettings, :os => 'darwin'
+
 default_action :config
 
 action :config do
   notify_prefs = node['cpe_notificationsettings'].reject { |_k, v| v.nil? }
-  return if notify_prefs.empty?
+  return if notify_prefs.empty? || notify_prefs['NotificationSettings'].empty?
   if node.os_less_than?('10.15')
     Chef::Log.warn(
       'cpe_notificationsettings requires 10.15 and higher.',

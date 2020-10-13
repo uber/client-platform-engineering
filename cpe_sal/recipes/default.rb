@@ -11,4 +11,6 @@
 # LICENSE file in the root directory of this source tree.
 #
 
+return unless node.macos? || node.windows?
+
 cpe_sal 'Configure Sal and Install Plugins'

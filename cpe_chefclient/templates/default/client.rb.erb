@@ -2,6 +2,8 @@
   <% @chef.each do |k, v| -%>
       <% if v.is_a?(Array) %>
 <%= k %> <%= v.to_s %>
+      <% elsif [true, false].include?(v) %>
+<%= k %> <%= v %>
       <% elsif v.start_with?(':') %>
 <%= k %> <%= v.to_s %>
       <% elsif v.is_a?(String) %>

@@ -12,7 +12,8 @@
 #
 
 resource_name :cpe_osquery
-provides :cpe_osquery
+provides :cpe_osquery, :os => ['darwin', 'linux', 'windows']
+
 default_action :manage
 
 action :manage do
@@ -273,9 +274,7 @@ action_class do # rubocop:disable Metrics/BlockLength
       end
     end
     execute '/usr/sbin/pkgutil --forget com.facebook.osquery' do
-      not_if do
-        shell_out('/usr/sbin/pkgutil --pkg-info com.facebook.osquery').error?
-      end
+      not_if { shell_out('/usr/sbin/pkgutil --pkg-info com.facebook.osquery').error? }
     end
   end
 

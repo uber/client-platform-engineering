@@ -13,6 +13,7 @@
 
 resource_name :cpe_umad_install
 provides :cpe_umad_install, :os => 'darwin'
+
 default_action :manage
 
 action :manage do

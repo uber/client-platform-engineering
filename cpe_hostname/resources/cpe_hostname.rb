@@ -12,7 +12,8 @@
 #
 
 resource_name :cpe_hostname
-provides :cpe_hostname
+provides :cpe_hostname, :os => 'darwin'
+
 default_action :manage
 
 action :manage do

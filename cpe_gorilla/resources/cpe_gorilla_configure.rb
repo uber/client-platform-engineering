@@ -13,6 +13,7 @@
 
 resource_name :cpe_gorilla_configure
 provides :cpe_gorilla_configure, :os => 'windows'
+
 default_action :manage
 
 action :manage do
@@ -34,6 +35,8 @@ action_class do
 
     # Get info about gorilla preferences, rejecting unset values
     gorilla_prefs = node['cpe_gorilla']['preferences'].reject { |_k, v| v.nil? }
+    local_manifest = node['cpe_gorilla']['local_manifest'].reject { |_k, v| v.nil? }
+
     if gorilla_prefs.empty? || gorilla_prefs.nil?
       # Don't install gorilla (for now) if no config is set
       Chef::Log.warn('config is not populated, skipping configuration')
@@ -45,6 +48,14 @@ action_class do
       rights :read, 'Everyone'
       rights :full_control, 'Administrators'
       action :create
+    end
+
+    # Install local manifest file
+    local_manifest_path = ::File.join(node['cpe_gorilla']['dir'], 'chef_manifest.yaml')
+    file local_manifest_path do
+      rights :read, 'Everyone'
+      rights :full_control, 'Administrators'
+      content JSON.parse(local_manifest.to_json).to_yaml # We have to convert to json first for hashes due to a chef bug
     end
 
     # Install YAML configuration file

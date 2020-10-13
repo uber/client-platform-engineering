@@ -11,7 +11,6 @@
 # LICENSE file in the root directory of this source tree.
 #
 
-# Only run resource on supported platforms
 return unless node.macos? || node.windows? || node.debian_family?
 
 cpe_osquery 'Install and Configure osquery'
