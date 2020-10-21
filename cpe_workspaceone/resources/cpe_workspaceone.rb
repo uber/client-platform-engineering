@@ -171,7 +171,9 @@ action_class do # rubocop:disable Metrics/BlockLength
       pkg_url node['cpe_workspaceone']['pkg']['pkg_url'] if node['cpe_workspaceone']['pkg']['pkg_url']
       receipt node['cpe_workspaceone']['pkg']['receipt']
       version ws1_pkg_version
-      headers node['cpe_workspaceone']['pkg']['headers']
+      unless node['cpe_workspaceone']['pkg']['headers'].nil?
+        headers node['cpe_workspaceone']['pkg']['headers']
+      end
     end
   end
 
