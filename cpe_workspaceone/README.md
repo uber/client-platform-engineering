@@ -24,6 +24,7 @@ Attributes
 * node['cpe_workspaceone']['mdm_profiles']['profiles']
 * node['cpe_workspaceone']['mdm_profiles']['profiles']['device']
 * node['cpe_workspaceone']['mdm_profiles']['profiles']['user']
+* node['cpe_workspaceone']['mdm_profiles']['profiles']['force']
 * node['cpe_workspaceone']['pkg']
 * node['cpe_workspaceone']['pkg']['allow_downgrade']
 * node['cpe_workspaceone']['pkg']['app_name']
@@ -105,6 +106,12 @@ node.default['cpe_workspaceone']['mdm_profiles']['profiles']['device'] = [
 # User Profiles
 node.default['cpe_workspaceone']['mdm_profiles']['profiles']['user'] = [
   'ExampleUserScopedProfileName',
+]
+# Force Profiles
+Force profiles will always be requested for install from hubcli, even if already installed. This can be useful if the profile install has side effects you wish to [re]trigger, like adding an identity to the keychain.
+
+node['cpe_workspaceone']['mdm_profiles']['profiles']['force'] = [
+  'ExampleForceInstalledProfileName'
 ]
 
 # Manage the preferences of the hub
