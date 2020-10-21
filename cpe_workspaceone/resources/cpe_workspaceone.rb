@@ -20,8 +20,8 @@ action :manage do
   # manage needs to go first if you are attempting to hide the agent from appearing showing it's UX to users.
   manage if manage?
   install if install?
-  enforce_mdm_profiles if enforce_mdm_profiles?
   manage_cli_config if manage_cli_config?
+  enforce_mdm_profiles if enforce_mdm_profiles?
   uninstall if !install? && uninstall?
 end
 
