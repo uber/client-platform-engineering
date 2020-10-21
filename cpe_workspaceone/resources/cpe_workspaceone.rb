@@ -112,6 +112,7 @@ action_class do # rubocop:disable Metrics/BlockLength
           command node.hubcli_cmd("profiles --install #{profile_id}")
           only_if { node.ws1_hubcli_exists } # non-gsub or guard will fail.
           not_if { node.profile_installed?('ProfileDisplayName', installed_profile_name) && !forcelist.include?(profile_name) }
+          timeout node['cpe_workspaceone']['hubcli_timeout'] || 300
         end
       end
     end
@@ -133,6 +134,7 @@ action_class do # rubocop:disable Metrics/BlockLength
           command node.hubcli_cmd("profiles --install #{profile_id}")
           only_if { node.ws1_hubcli_exists } # non-gsub or guard will fail.
           not_if { node.user_profile_installed?('ProfileDisplayName', installed_profile_name) && !forcelist.include?(profile_name) }
+          timeout node['cpe_workspaceone']['hubcli_timeout'] || 300
         end
       end
     end
