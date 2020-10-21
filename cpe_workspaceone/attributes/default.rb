@@ -13,7 +13,7 @@
 
 default['cpe_workspaceone'] = {
   'cache_invalidation' => 7200, # seconds, 2 hours
-  'hubcli_path' => '/Applications/Workspace ONE Intelligent Hub.app/Contents/Resources/',
+  'hubcli_path' => '/Applications/Workspace ONE Intelligent Hub.app/Contents/Resources/'\
   'IntelligentHubAgent.app/Contents/Resources/cli/hubcli',
   'hubcli_timeout' => 300,
   'install' => false,
