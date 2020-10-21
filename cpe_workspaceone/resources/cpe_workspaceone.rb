@@ -96,7 +96,7 @@ action_class do # rubocop:disable Metrics/BlockLength
       return
     end
 
-    forcelist = node['cpe_workspaceone']['mdm_profiles']['profiles']['force'] || []
+    device_forcelist = node['cpe_workspaceone']['mdm_profiles']['profiles']['device_forced'] || []
 
     # Bail if there are no device attributes
     device_attributes = node.ws1_device_attributes
@@ -116,11 +116,13 @@ action_class do # rubocop:disable Metrics/BlockLength
         execute "Sending #{profile_name} for device installation to Workspace One console" do
           command node.hubcli_cmd("profiles --install #{profile_id}")
           only_if { node.ws1_hubcli_exists } # non-gsub or guard will fail.
-          not_if { node.profile_installed?('ProfileDisplayName', installed_profile_name) && !forcelist.include?(profile_name) }
+          not_if { node.profile_installed?('ProfileDisplayName', installed_profile_name) && !device_forcelist.include?(profile_name) }
           timeout node['cpe_workspaceone']['hubcli_timeout']
         end
       end
     end
+
+    user_forcelist = node['cpe_workspaceone']['mdm_profiles']['profiles']['user_forced'] || []
 
     # Loop through the enforced user profiles and compare with available profiles from MDM
     enforced_user_ws1_profiles = node['cpe_workspaceone']['mdm_profiles']['profiles']['user']
@@ -138,7 +140,7 @@ action_class do # rubocop:disable Metrics/BlockLength
         execute "Sending #{profile_name} for user installation to Workspace One console" do
           command node.hubcli_cmd("profiles --install #{profile_id}")
           only_if { node.ws1_hubcli_exists } # non-gsub or guard will fail.
-          not_if { node.user_profile_installed?('ProfileDisplayName', installed_profile_name) && !forcelist.include?(profile_name) }
+          not_if { node.user_profile_installed?('ProfileDisplayName', installed_profile_name) && !user_forcelist.include?(profile_name) }
           timeout node['cpe_workspaceone']['hubcli_timeout']
         end
       end

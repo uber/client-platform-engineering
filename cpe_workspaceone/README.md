@@ -60,7 +60,9 @@ You can add any arbitrary keys to `node['cpe_workspaceone']['prefs']` to have th
 
 Due to the fact that `cpe_profiles` usually runs last or second to last in a typical run list, a `macos_userdefaults` call is made during the `manage` resource block. This is so if you chose to disable the menubar, it will be honored at the time of agent installation. This call cannot be made while the agent is running as it is unfortunately not honored by Workspace One at this time.
 
-Separate preferences are available through `hubcli config`, and this cookbook manages four of them:
+# CLI Config
+
+Separate preferences are available through `hubcli config`. If node['cpe_workspaceone']['manage_cli'] is true, this cookbook will manage them.
 
 ```
 'cli_prefs' => {
@@ -108,11 +110,15 @@ node.default['cpe_workspaceone']['mdm_profiles']['profiles']['device'] = [
 node.default['cpe_workspaceone']['mdm_profiles']['profiles']['user'] = [
   'ExampleUserScopedProfileName',
 ]
-# Force Profiles
+# Forced Profiles
 Force profiles will always be requested for install from hubcli, even if already installed. This can be useful if the profile install has side effects you wish to [re]trigger, like adding an identity to the keychain.
 
-node['cpe_workspaceone']['mdm_profiles']['profiles']['force'] = [
-  'ExampleForceInstalledProfileName'
+node['cpe_workspaceone']['mdm_profiles']['profiles']['user_forced'] = [
+  'ExampleForceInstalledUserProfileName'
+]
+
+node['cpe_workspaceone']['mdm_profiles']['profiles']['device_forced'] = [
+  'ExampleForceInstalledDeviceProfileName'
 ]
 
 # Manage the preferences of the hub

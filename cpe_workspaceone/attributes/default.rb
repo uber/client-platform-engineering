@@ -24,7 +24,8 @@ default['cpe_workspaceone'] = {
     'profiles' => {
       'device' => [],
       'user' => [],
-      'force' => [],
+      'user_forced' => [],
+      'device_forced' => []
     },
   },
   'pkg' => {
