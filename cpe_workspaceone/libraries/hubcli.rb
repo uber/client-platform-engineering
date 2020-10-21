@@ -71,10 +71,7 @@ class Chef
     end
 
     def ws1_hubcli_exists
-      @ws1_hubcli_exists ||=
-        begin
-          ::File.exists?(hubcli_path)
-        end
+      @ws1_hubcli_exists ||= ::File.exists?(hubcli_path)
     end
 
     def hubcli_path
