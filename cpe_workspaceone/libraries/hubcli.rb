@@ -89,7 +89,7 @@ class Chef
         raise "Tried to execute hubcli, hubcli does not exist"
       end
 
-      shell_out(hubcli_cmd(cmd), timeout: node['cpe_workspaceone']['hubcli_timeout'] || 300)
+      shell_out(hubcli_cmd(cmd), timeout: node['cpe_workspaceone']['hubcli_timeout'])
     end
 
     def _get_available_ws1_profiles_list(hubcli_path)
