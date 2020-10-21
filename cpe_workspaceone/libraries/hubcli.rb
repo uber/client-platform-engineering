@@ -73,17 +73,33 @@ class Chef
     def ws1_hubcli_exists
       @ws1_hubcli_exists ||=
         begin
-          hubcli_path = node['cpe_workspaceone']['hubcli_path']
           ::File.exists?(hubcli_path)
         end
+    end
+
+    def hubcli_path
+      return 'hubcli' if node['cpe_workspaceone']['hubcli_path'].nil?
+
+      node['cpe_workspaceone']['hubcli_path'].gsub(/ /, '\ ')
+    end
+
+    def hubcli_cmd(cmd)
+      "#{hubcli_path} #{cmd.strip}"
+    end
+
+    def hubcli_execute(cmd)
+      unless ws1_hubcli_exists
+        raise "Tried to execute hubcli, hubcli does not exist"
+      end
+
+      shell_out(hubcli_cmd(cmd), timeout: node['cpe_workspaceone']['hubcli_timeout'] || 300)
     end
 
     def _get_available_ws1_profiles_list(hubcli_path)
       attributes = {}
       if node.macos?
-        # spaces in path, so we need to convert them with gsub
-        cmd = shell_out(
-          "#{hubcli_path.gsub(/ /, '\ ')} profiles --list --json",
+        cmd = hubcli_execute(
+          "profiles --list --json",
         )
       end
       if cmd.exitstatus.zero?
@@ -107,8 +123,7 @@ class Chef
 
     def _trigger_sync(hubcli_path)
       if node.macos?
-        # spaces in path, so we need to convert them with gsub
-        shell_out("#{hubcli_path.gsub(/ /, '\ ')} sync")
+        hubcli_execute("sync")
       end
     end
 
