@@ -21,6 +21,7 @@ action :manage do
   manage if manage?
   install if install?
   enforce_mdm_profiles if enforce_mdm_profiles?
+  manage_cli_config if manage_cli_config?
   uninstall if !install? && uninstall?
 end
 
@@ -42,6 +43,10 @@ action_class do # rubocop:disable Metrics/BlockLength
 
   def manage?
     node['cpe_workspaceone']['manage']
+  end
+
+  def manage_cli_config?
+    node['cpe_workspaceone']['manage_cli']
   end
 
   def uninstall?
@@ -189,8 +194,6 @@ action_class do # rubocop:disable Metrics/BlockLength
         end
       end
     end
-
-    manage_cli_config
   end
 
   def uninstall

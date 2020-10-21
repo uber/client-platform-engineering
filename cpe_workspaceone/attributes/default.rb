@@ -18,6 +18,7 @@ default['cpe_workspaceone'] = {
   'hubcli_timeout' => 300,
   'install' => false,
   'manage' => false,
+  'manage_cli' => false,
   'mdm_profiles' => {
     'enforce' => false,
     'profiles' => {

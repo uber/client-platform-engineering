@@ -19,6 +19,7 @@ Attributes
 * node['cpe_workspaceone']['hubcli_timeout']
 * node['cpe_workspaceone']['install']
 * node['cpe_workspaceone']['manage']
+* node['cpe_workspaceone']['manage_cli']
 * node['cpe_workspaceone']['mdm_profiles']
 * node['cpe_workspaceone']['mdm_profiles']['enforce']
 * node['cpe_workspaceone']['mdm_profiles']['profiles']
