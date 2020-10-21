@@ -16,6 +16,7 @@ Attributes
 * node['cpe_workspaceone']
 * node['cpe_workspaceone']['cache_invalidation']
 * node['cpe_workspaceone']['hubcli_path']
+* node['cpe_workspaceone']['hubcli_timeout']
 * node['cpe_workspaceone']['install']
 * node['cpe_workspaceone']['manage']
 * node['cpe_workspaceone']['mdm_profiles']
@@ -31,9 +32,15 @@ Attributes
 * node['cpe_workspaceone']['pkg']['pkg_url']
 * node['cpe_workspaceone']['pkg']['receipt']
 * node['cpe_workspaceone']['pkg']['version']
+* node['cpe_workspaceone']['pkg']['headers']
 * node['cpe_workspaceone']['prefs']
 * node['cpe_workspaceone']['uninstall']
 * node['cpe_workspaceone']['use_cache']
+* node['cpe_workspaceone']['cli_prefs']
+* node['cpe_workspaceone']['cli_prefs']['checkin-interval']
+* node['cpe_workspaceone']['cli_prefs']['menubar-icon']
+* node['cpe_workspaceone']['cli_prefs']['sample-interval']
+* node['cpe_workspaceone']['cli_prefs']['transmit-interval']
 
 Usage
 -----
@@ -51,6 +58,21 @@ You can add any arbitrary keys to `node['cpe_workspaceone']['prefs']` to have th
 
 Due to the fact that `cpe_profiles` usually runs last or second to last in a typical run list, a `macos_userdefaults` call is made during the `manage` resource block. This is so if you chose to disable the menubar, it will be honored at the time of agent installation. This call cannot be made while the agent is running as it is unfortunately not honored by Workspace One at this time.
 
+Separate preferences are available through `hubcli config`, and this cookbook manages four of them:
+
+```
+'cli_prefs' => {
+  'checkin-interval' => 60,
+  'menubar-icon' => true,
+  'sample-interval' => 60,
+  'transmit-interval' => 60,
+}
+```
+
+The defaults here are set in case of `nil`. See `hubcli config --help` for more information.
+
+The cookbook intentionally does not manage 'server-url' or 'awcm-url'.
+
 # Package
 By default the package will not be installed. If you need to test a beta release of the agent, be aware that `allow_downgrade` value will not be honored if there is a space in the version number. As of v1910, the beta version string is '19.10 Beta' which causes the built in ruby gem `Gem::Version` to fail.
 
@@ -61,7 +83,7 @@ By default the package will not be installed. If you need to test a beta release
 
 As of v1910, there is only an installation feature. If for some reason you need to remove profiles, you must use the Console API or the Console administration pages.
 
-Please note that as of macOS Catalina, the key `PayloadRemovalDisallowed` is no longer honored at the MDM level if the value is set to `False`. This effectively means that **only** the mdmclient can remove MDM profiles, regardless if a user is an administrator on the dev ice or not.
+Please note that as of macOS Catalina, the key `PayloadRemovalDisallowed` is no longer honored at the MDM level if the value is set to `False`. This effectively means that **only** the mdmclient can remove MDM profiles, regardless if a user is an administrator on the device or not.
 
 ## HubCLI cache
 By default, `cpe_workspaceone` one will create a cache of the json in the default chef cache folder.
