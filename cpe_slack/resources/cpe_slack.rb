@@ -12,14 +12,29 @@
 #
 
 resource_name :cpe_slack
-provides :cpe_slack, :os => 'darwin'
-
 default_action :config
+
+action_class do
+  def set_signin_token(token)
+    path = "/Users/#{node.console_user}/Library/Application Support/Slack"
+
+    return false if node.console_user.nil?
+    return false unless ::File.directory?(path)
+
+    contents = { "default_signin_team" => token }.to_json
+
+    file "#{path}/Signin.slacktoken" do
+      content contents
+      owner node.console_user
+    end
+  end
+end
 
 # Enforce Slack Settings
 action :config do
-  slack_prefs = node['cpe_slack'].reject { |_k, v| v.nil? }
-  if slack_prefs.empty?
+  slack_prefs = node['cpe_slack']['preferences'].reject { |_k, v| v.nil? }
+  signin_token = node['cpe_slack']['signin_token']
+  if slack_prefs.empty? && signin_token.nil?
     Chef::Log.info("#{cookbook_name}: No prefs found.")
     return
   end
@@ -50,6 +65,10 @@ action :config do
   slack_prefs.each_key do |key|
     next if slack_prefs[key].nil?
     slack_profile['PayloadContent'][0][key] = slack_prefs[key]
+  end
+
+  unless signin_token.nil?
+    set_signin_token(signin_token)
   end
 
   node.default['cpe_profiles']["#{prefix}.slack"] = slack_profile
