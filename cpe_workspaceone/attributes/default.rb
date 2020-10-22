@@ -48,5 +48,5 @@ default['cpe_workspaceone'] = {
     'menubar-icon' => true,
     'sample-interval' => 60,
     'transmit-interval' => 60,
-  }
+  },
 }

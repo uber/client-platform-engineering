@@ -61,7 +61,7 @@ action_class do # rubocop:disable Metrics/BlockLength
 
   def set_cli_config(flag, val)
     default = WS1_DEFAULT_PREFS[flag]
-    val = val || default
+    val ||= default
     cmd = node.hubcli_execute("config --set #{flag} #{val}")
     unless cmd.exitstatus.zero?
       if !cmd.stderr.include?('Error: Invalid value for option') || val == default
@@ -80,7 +80,7 @@ action_class do # rubocop:disable Metrics/BlockLength
 
     prefs = node['cpe_workspaceone']['cli_prefs'].reject { |_, v| v.nil? }
     prefs.each do |flag, val|
-      unless WS1_DEFAULT_PREFS.keys.include?(flag)
+      unless WS1_DEFAULT_PREFS.key?(flag)
         Chef::Log.warn("cpe_workspaceone - refusing to manage unknown cli preference '#{flag}'")
         next
       end
@@ -116,7 +116,10 @@ action_class do # rubocop:disable Metrics/BlockLength
         execute "Sending #{profile_name} for device installation to Workspace One console" do
           command node.hubcli_cmd("profiles --install #{profile_id}")
           only_if { node.ws1_hubcli_exists } # non-gsub or guard will fail.
-          not_if { node.profile_installed?('ProfileDisplayName', installed_profile_name) && !device_forcelist.include?(profile_name) }
+          not_if do
+            node.profile_installed?('ProfileDisplayName', installed_profile_name) && \
+            !device_forcelist.include?(profile_name)
+          end
           timeout node['cpe_workspaceone']['hubcli_timeout']
         end
       end
@@ -140,7 +143,10 @@ action_class do # rubocop:disable Metrics/BlockLength
         execute "Sending #{profile_name} for user installation to Workspace One console" do
           command node.hubcli_cmd("profiles --install #{profile_id}")
           only_if { node.ws1_hubcli_exists } # non-gsub or guard will fail.
-          not_if { node.user_profile_installed?('ProfileDisplayName', installed_profile_name) && !user_forcelist.include?(profile_name) }
+          not_if do
+            node.user_profile_installed?('ProfileDisplayName', installed_profile_name) && \
+            !user_forcelist.include?(profile_name)
+          end
           timeout node['cpe_workspaceone']['hubcli_timeout']
         end
       end
