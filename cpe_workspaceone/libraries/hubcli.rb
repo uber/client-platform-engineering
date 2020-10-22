@@ -28,13 +28,12 @@ class Chef
       # Bail if device is not enrolled into mdm
       return {} unless node.profile_installed?('ProfileDisplayName', 'Device Manager')
 
-      hubcli_path = node['cpe_workspaceone']['hubcli_path']
       # Bail if hubcli doesn't exist
       return {} unless ws1_hubcli_exists
 
       # If for some reason an admin doesn't want to use the cache, always return the json from WS1
       ws1_use_cache = node['cpe_workspaceone']['use_cache']
-      return _get_available_ws1_profiles_list(hubcli_path) unless ws1_use_cache
+      return _get_available_ws1_profiles_list unless ws1_use_cache
 
       # Setup cache file
       ws1_cache_file_path = ::File.join(Chef::Config[:file_cache_path], 'cpe_workspaceone-device_attributes.json')
@@ -48,15 +47,15 @@ class Chef
         # last checked OS version (Example, upgrading from 10.14 to 10.15 in between two hour chef cache), reject
         # the current cache and check again, so we can look for newly available profiles.
         if node.greater_than?(node['platform_version'], parsed_ws1_json['os_version'])
-          ws1_device_attributes = _get_available_ws1_profiles_list(hubcli_path)
+          ws1_device_attributes = _get_available_ws1_profiles_list
         else
           return parsed_ws1_json
         end
       # Cache either doesn't exist or isn't fresh
       else
         # Trigger a sync to kickstart WS1 agent
-        _trigger_sync(hubcli_path)
-        ws1_device_attributes = _get_available_ws1_profiles_list(hubcli_path)
+        _trigger_sync
+        ws1_device_attributes = _get_available_ws1_profiles_list
       end
 
       # Only write the attributes if they come back in a good, clean state
@@ -77,26 +76,26 @@ class Chef
     def hubcli_path
       return 'hubcli' if node['cpe_workspaceone']['hubcli_path'].nil?
 
-      node['cpe_workspaceone']['hubcli_path'].gsub(/ /, '\ ')
+      node['cpe_workspaceone']['hubcli_path']
     end
 
     def hubcli_cmd(cmd)
-      "#{hubcli_path} #{cmd.strip}"
+      "#{hubcli_path.gsub(/ /, '\ ')} #{cmd.strip}"
     end
 
     def hubcli_execute(cmd)
       unless ws1_hubcli_exists
-        raise "Tried to execute hubcli, hubcli does not exist"
+        Chef::Log.warn('Tried to execute hubcli, hubcli does not exist')
       end
-
-      shell_out(hubcli_cmd(cmd), timeout: node['cpe_workspaceone']['hubcli_timeout'])
+      # hash rockets trigger a deprecation command and an argument error
+      shell_out(hubcli_cmd(cmd), timeout: node['cpe_workspaceone']['hubcli_timeout']) # rubocop:disable Style/HashSyntax
     end
 
-    def _get_available_ws1_profiles_list(hubcli_path)
+    def _get_available_ws1_profiles_list
       attributes = {}
       if node.macos?
         cmd = hubcli_execute(
-          "profiles --list --json",
+          'profiles --list --json',
         )
       end
       if cmd.exitstatus.zero?
@@ -118,9 +117,9 @@ class Chef
       attributes
     end
 
-    def _trigger_sync(hubcli_path)
+    def _trigger_sync
       if node.macos?
-        hubcli_execute("sync")
+        hubcli_execute('sync')
       end
     end
 
