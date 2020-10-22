@@ -15,13 +15,17 @@ default['cpe_workspaceone'] = {
   'cache_invalidation' => 7200, # seconds, 2 hours
   'hubcli_path' => '/Applications/Workspace ONE Intelligent Hub.app/Contents/Resources/'\
   'IntelligentHubAgent.app/Contents/Resources/cli/hubcli',
+  'hubcli_timeout' => 300,
   'install' => false,
   'manage' => false,
+  'manage_cli' => false,
   'mdm_profiles' => {
     'enforce' => false,
     'profiles' => {
       'device' => [],
       'user' => [],
+      'user_forced' => [],
+      'device_forced' => [],
     },
   },
   'pkg' => {
@@ -32,10 +36,17 @@ default['cpe_workspaceone'] = {
     'pkg_url' => nil,
     'receipt' => 'com.air-watch.pkg.OSXAgent',
     'version' => nil,
+    'headers' => nil,
   },
   'prefs' => {
     'HubAgentIconVisiblePreference' => nil,
   },
   'uninstall' => false,
   'use_cache' => true,
+  'cli_prefs' => {
+    'checkin-interval' => 60,
+    'menubar-icon' => true,
+    'sample-interval' => 60,
+    'transmit-interval' => 60,
+  }
 }
