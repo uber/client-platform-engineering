@@ -21,7 +21,7 @@ action :manage do
   unmanage if unmanage?
 end
 
-action_class do
+action_class do # rubocop:disable Metrics/BlockLength
   def configure?
     node['cpe_chefclient']['configure']
   end

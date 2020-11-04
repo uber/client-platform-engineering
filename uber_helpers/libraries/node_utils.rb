@@ -305,6 +305,7 @@ class Chef
     def profile_contains_content?(profile_content, profile_identifier)
       unless node.macos?
         Chef::Log.warn('node.profile_contains_content called on non-macOS!')
+        return
       end
       _parse_profile_contents(profile_content, profile_identifier,
                               _config_profiles)
@@ -313,6 +314,7 @@ class Chef
     def profile_installed?(type, value)
       unless node.macos?
         Chef::Log.warn('node.profile_installed called on non-macOS!')
+        return
       end
       _parse_profiles(type, value, _config_profiles)
     end
@@ -336,7 +338,7 @@ class Chef
     def user_profile_installed?(type, value)
       unless node.macos?
         Chef::Log.warn('node.user_profile_installed called on non-macOS!')
-        nil
+        return
       end
       _parse_user_profiles(type, value, _user_config_profiles)
     end
