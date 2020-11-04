@@ -94,7 +94,7 @@ action_class do # rubocop:disable Metrics/BlockLength
     file config do
       owner root_owner
       group root_group
-      content metricbeat_conf.to_yaml
+      content YAML.dump(metricbeat_conf)
       notifies :restart, "#{service_type}[#{service_name}]"
     end
     # Because windows services are annoying and start immediately, so this

@@ -95,7 +95,7 @@ action_class do # rubocop:disable Metrics/BlockLength
   def macos_configure(sal_prefs)
     # Build configuration profile and pass it to cpe_profiles
     prefix = node['cpe_profiles']['prefix']
-    organization = node['organization'] ? node['organization'] : 'Uber'
+    organization = node['organization'] ? node['organization'] : 'Uber' # rubocop:disable Style/UnneededCondition
 
     if node.os_at_least_or_lower?('10.15.99')
       sal_profile = {

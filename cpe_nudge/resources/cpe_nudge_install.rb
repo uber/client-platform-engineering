@@ -21,7 +21,7 @@ action :manage do
   remove if uninstall?
 end
 
-action_class do
+action_class do # rubocop:disable Metrics/BlockLength
   def custom_resources?
     node['cpe_nudge']['custom_resources']
   end
