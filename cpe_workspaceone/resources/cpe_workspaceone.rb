@@ -12,18 +12,27 @@
 #
 
 resource_name :cpe_workspaceone
-provides :cpe_workspaceone
+provides :cpe_workspaceone, :os => 'darwin'
+
 default_action :manage
 
 action :manage do
   # manage needs to go first if you are attempting to hide the agent from appearing showing it's UX to users.
   manage if manage?
   install if install?
+  manage_cli_config if manage_cli_config?
   enforce_mdm_profiles if enforce_mdm_profiles?
   uninstall if !install? && uninstall?
 end
 
 action_class do # rubocop:disable Metrics/BlockLength
+  WS1_DEFAULT_PREFS = {
+    'checkin-interval' => 60,
+    'menubar-icon' => true,
+    'sample-interval' => 60,
+    'transmit-interval' => 60,
+  }.freeze
+
   def enforce_mdm_profiles?
     node['cpe_workspaceone']['mdm_profiles']['enforce']
   end
@@ -36,13 +45,48 @@ action_class do # rubocop:disable Metrics/BlockLength
     node['cpe_workspaceone']['manage']
   end
 
+  def manage_cli_config?
+    node['cpe_workspaceone']['manage_cli']
+  end
+
   def uninstall?
     node['cpe_workspaceone']['uninstall']
   end
 
   def enforce_mdm_profiles
     return unless node['cpe_workspaceone']['mdm_profiles']['enforce']
+
     macos_enforce_mdm_profiles if node.macos?
+  end
+
+  def set_cli_config(flag, val)
+    default = WS1_DEFAULT_PREFS[flag]
+    val ||= default
+    cmd = node.hubcli_execute("config --set #{flag} #{val}")
+    unless cmd.exitstatus.zero?
+      if !cmd.stderr.include?('Error: Invalid value for option') || val == default
+        cmd.error!
+      end
+      Chef::Log.warn("cpe_workspaceone - #{cmd.stderr.strip} (#{val}) - setting default")
+      set_cli_config(flag, default)
+    end
+  end
+
+  def manage_cli_config
+    unless node.ws1_hubcli_exists
+      Chef::Log.warn('cpe_workspaceone - hubcli path does not exist, cannot enforce MDM profiles!')
+      return
+    end
+
+    prefs = node['cpe_workspaceone']['cli_prefs'].reject { |_, v| v.nil? }
+    prefs.each do |flag, val|
+      unless WS1_DEFAULT_PREFS.key?(flag)
+        Chef::Log.warn("cpe_workspaceone - refusing to manage unknown cli preference '#{flag}'")
+        next
+      end
+
+      set_cli_config(flag, val)
+    end
   end
 
   def macos_enforce_mdm_profiles
@@ -52,11 +96,11 @@ action_class do # rubocop:disable Metrics/BlockLength
       return
     end
 
+    device_forcelist = node['cpe_workspaceone']['mdm_profiles']['profiles']['device_forced'] || []
+
     # Bail if there are no device attributes
     device_attributes = node.ws1_device_attributes
     return if device_attributes.empty? || device_attributes.nil?
-
-    hubcli_path = node['cpe_workspaceone']['hubcli_path']
 
     # Loop through the enforced device profiles and compare with available profiles from MDM
     enforced_device_ws1_profiles = node['cpe_workspaceone']['mdm_profiles']['profiles']['device']
@@ -70,13 +114,18 @@ action_class do # rubocop:disable Metrics/BlockLength
       # Because of user/device level profiles being in one array, we need the if statement outside of the execute block
       if enforced_device_ws1_profiles.include?(profile_name)
         execute "Sending #{profile_name} for device installation to Workspace One console" do
-          # spaces in path, so we need to convert them with gsub
-          command "#{hubcli_path.gsub(/ /, '\ ')} profiles --install #{profile_id}"
+          command node.hubcli_cmd("profiles --install #{profile_id}")
           only_if { node.ws1_hubcli_exists } # non-gsub or guard will fail.
-          not_if { node.profile_installed?('ProfileDisplayName', installed_profile_name) }
+          not_if do
+            node.profile_installed?('ProfileDisplayName', installed_profile_name) && \
+            !device_forcelist.include?(profile_name)
+          end
+          timeout node['cpe_workspaceone']['hubcli_timeout']
         end
       end
     end
+
+    user_forcelist = node['cpe_workspaceone']['mdm_profiles']['profiles']['user_forced'] || []
 
     # Loop through the enforced user profiles and compare with available profiles from MDM
     enforced_user_ws1_profiles = node['cpe_workspaceone']['mdm_profiles']['profiles']['user']
@@ -92,10 +141,13 @@ action_class do # rubocop:disable Metrics/BlockLength
       # Because of user/device level profiles being in one array, we need the if statement outside of the execute block
       if enforced_user_ws1_profiles.include?(profile_name)
         execute "Sending #{profile_name} for user installation to Workspace One console" do
-          # spaces in path, so we need to convert them with gsub
-          command "#{hubcli_path.gsub(/ /, '\ ')} profiles --install #{profile_id}"
+          command node.hubcli_cmd("profiles --install #{profile_id}")
           only_if { node.ws1_hubcli_exists } # non-gsub or guard will fail.
-          not_if { node.user_profile_installed?('ProfileDisplayName', installed_profile_name) }
+          not_if do
+            node.user_profile_installed?('ProfileDisplayName', installed_profile_name) && \
+            !user_forcelist.include?(profile_name)
+          end
+          timeout node['cpe_workspaceone']['hubcli_timeout']
         end
       end
     end
@@ -103,6 +155,7 @@ action_class do # rubocop:disable Metrics/BlockLength
 
   def install
     return unless node['cpe_workspaceone']['install']
+
     macos_install if node.macos?
   end
 
@@ -124,43 +177,25 @@ action_class do # rubocop:disable Metrics/BlockLength
       pkg_url node['cpe_workspaceone']['pkg']['pkg_url'] if node['cpe_workspaceone']['pkg']['pkg_url']
       receipt node['cpe_workspaceone']['pkg']['receipt']
       version ws1_pkg_version
+      unless node['cpe_workspaceone']['pkg']['headers'].nil?
+        headers node['cpe_workspaceone']['pkg']['headers']
+      end
     end
   end
 
   def manage
     return unless node['cpe_workspaceone']['manage']
+
     macos_manage if node.macos?
   end
 
   def macos_manage
     ws1agent_prefs = node['cpe_workspaceone']['prefs'].reject { |_k, v| v.nil? }
-    prefix = node['cpe_profiles']['prefix']
-    organization = node['organization'] || 'Uber'
-    ws1agent_profile = {
-      'PayloadIdentifier' => "#{prefix}.ws1",
-      'PayloadRemovalDisallowed' => true,
-      'PayloadScope' => 'System',
-      'PayloadType' => 'Configuration',
-      'PayloadUUID' => '605A10E6-9068-4DAA-9AE0-5334E4D49143',
-      'PayloadOrganization' => organization,
-      'PayloadVersion' => 1,
-      'PayloadDisplayName' => 'Workspace One',
-      'PayloadContent' => [],
-    }
     unless ws1agent_prefs.empty?
-      ws1agent_profile['PayloadContent'].push(
-        'PayloadType' => 'com.vmware.hub.agent',
-        'PayloadVersion' => 1,
-        'PayloadIdentifier' => "#{prefix}.ws1",
-        'PayloadUUID' => 'A37C4F5A-07F8-4E66-BA20-9EB808EB3E3D',
-        'PayloadEnabled' => true,
-        'PayloadDisplayName' => 'Workspace One',
-      )
       ws1agent_prefs.each_key do |key|
         next if ws1agent_prefs[key].nil?
-        ws1agent_profile['PayloadContent'][0][key] = ws1agent_prefs[key]
-        # Double tap the preferences since WS1 agent doesn't use profiles atm. Chef 14+
-        if node.at_least?(node['chef_packages']['chef']['version'], '14.0.0')
+        # WS1 agent doesn't use profiles atm. Chef 14+
+        if node.at_least_chef14?
           macos_userdefaults "Configure com.vmware.hub.agent - #{key}" do
             domain '/Library/Preferences/com.vmware.hub.agent'
             key key
@@ -169,11 +204,11 @@ action_class do # rubocop:disable Metrics/BlockLength
         end
       end
     end
-    node.default['cpe_profiles']["#{prefix}.ws1"] = ws1agent_profile
   end
 
   def uninstall
     return unless node['cpe_workspaceone']['uninstall']
+
     macos_uninstall if node.macos?
   end
 

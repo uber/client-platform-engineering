@@ -12,7 +12,8 @@
 #
 
 resource_name :cpe_filebeat
-provides :cpe_filebeat
+provides :cpe_filebeat, :os => ['darwin', 'linux', 'windows']
+
 default_action :manage
 
 action :manage do
@@ -85,9 +86,7 @@ action_class do # rubocop:disable Metrics/BlockLength
     if node.macos?
       launchd service_name do
         action :nothing
-        only_if do
-          ::File.exist?("/Library/LaunchDaemons/#{service_name}.plist")
-        end
+        only_if { ::File.exist?("/Library/LaunchDaemons/#{service_name}.plist") }
         subscribes :restart, 'cpe_remote_zip[filebeat_zip]'
       end
     end
@@ -95,7 +94,7 @@ action_class do # rubocop:disable Metrics/BlockLength
     file config do
       owner root_owner
       group root_group
-      content filebeat_conf.to_yaml
+      content YAML.dump(filebeat_conf)
       notifies :restart, "#{service_type}[#{service_name}]"
     end
     # Because windows services are annoying and start immediately, so this

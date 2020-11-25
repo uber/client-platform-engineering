@@ -1,5 +1,5 @@
 #
-# Cookbook Name:: uber_helprs
+# Cookbook Name:: uber_helpers
 # Libraries:: win_utils
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
@@ -77,6 +77,12 @@ if Chef::Platform.windows?
           end
         end
         return pkg_version
+      end
+
+      # returns windows friendly version of the provided path,
+      # ensures backslashes are used everywhere
+      def self.friendly_path(path)
+        path.gsub(::File::SEPARATOR, ::File::ALT_SEPARATOR || '\\') if path
       end
 
       def self.reg_path_exist?(reg_loc, reg_path)

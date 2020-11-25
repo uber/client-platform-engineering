@@ -12,7 +12,8 @@
 #
 
 resource_name :cpe_ssh_server
-provides :cpe_ssh_server, :platform => 'mac_os_x'
+provides :cpe_ssh_server, :os => 'darwin'
+
 default_action :manage
 
 action :manage do
@@ -21,6 +22,11 @@ end
 
 action_class do
   def manage
+    # On 10.15 systemsetup needs a PPPC/TCC profile to be able to run setremotelogin.
+    # Currently, the TCC profile needs an app bundle to tie to. Since
+    # chef-client/chefctl are not bundle apps, nor signed until chef 15, we can no
+    # longer adequately manage SSH this way. Instead, we can use launchctl and forcibly
+    # load or unload the plist. For some reason Apple didn't block this method.
     if node['cpe_ssh_server']['enable']
       enable
     else
@@ -35,9 +41,16 @@ action_class do
 
   def macos_disable
     # Disable SSH
-    execute 'Disable SSH' do
-      command '/usr/sbin/systemsetup -f -setremotelogin off'
-      only_if { macos_ssh_status('On') }
+    if node.os_less_than?('10.15')
+      execute 'Disable SSH' do
+        command '/usr/sbin/systemsetup -f -setremotelogin off'
+        only_if { macos_ssh_status('On') }
+      end
+    else
+      launchd 'Disable SSH' do
+        action :disable
+        path '/System/Library/LaunchDaemons/ssh.plist'
+      end
     end
   end
 
@@ -48,9 +61,16 @@ action_class do
 
   def macos_enable
     # Enable SSH
-    execute 'Enable SSH' do
-      command '/usr/sbin/systemsetup -f -setremotelogin on'
-      only_if { macos_ssh_status('Off') }
+    if node.os_less_than?('10.15')
+      execute 'Enable SSH' do
+        command '/usr/sbin/systemsetup -f -setremotelogin on'
+        only_if { macos_ssh_status('Off') }
+      end
+    else
+      launchd 'Enable SSH' do
+        action :enable
+        path '/System/Library/LaunchDaemons/ssh.plist'
+      end
     end
   end
 

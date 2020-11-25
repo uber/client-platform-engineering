@@ -11,6 +11,6 @@
 # LICENSE file in the root directory of this source tree.
 #
 
-return unless node.macos?
+return unless node.macos? || node.windows?
 
 cpe_crashplan_install 'Apply Crashplan install'

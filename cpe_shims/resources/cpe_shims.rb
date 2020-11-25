@@ -12,7 +12,8 @@
 #
 
 resource_name :cpe_shims
-provides :cpe_shims
+provides :cpe_shims, :os => ['darwin', 'linux']
+
 default_action :manage
 
 action :manage do

@@ -12,6 +12,8 @@
 #
 
 resource_name :cpe_uiagent
+provides :cpe_uiagent, :os => 'darwin'
+
 default_action :run
 
 action :run do
@@ -22,7 +24,7 @@ action :run do
   end
 
   prefix = node['cpe_profiles']['prefix']
-  organization = node['organization'] ? node['organization'] : 'Uber'
+  organization = node['organization'] ? node['organization'] : 'Uber' # rubocop:disable Style/UnneededCondition
   uiagent_profile = {
     'PayloadIdentifier' => "#{prefix}.uiagent",
     'PayloadRemovalDisallowed' => true,

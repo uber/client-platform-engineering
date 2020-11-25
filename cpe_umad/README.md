@@ -1,6 +1,6 @@
 cpe_umad Cookbook
 ========================
-Installs and manages all components of [UMAD](https://github.com/erikng/umad)
+Installs and manages all components of [UMAD](https://github.com/erikng/umad) except for the embedded Python.framework
 
 Requirements
 ------------
@@ -28,6 +28,25 @@ Attributes
 
 Notes
 -----
+This cookbook does not ship the `Python.framework` file found within the UMAD v2.0 codebase
+
+This process will certainly be organization specific and you can utilize other tooling such as `cpe_remote_pkg` to install your own python (or the embedded python within the github).
+
+You can enforce your own, custom python and shebang, pointing to your shipped python.
+
+For example in your recipe you could do the following:
+
+```
+# Install python framework first
+cpe_remote_pkg 'umad_python' do
+  version '3.8.0'
+  checksum 'ef52f595c6046f8ce75bd48d57af9d16972125b60318763c90712b8d9c8d51c5'
+  receipt 'com.org.pkg.umad.python'
+end
+# Setup cpe_umad
+node.default['cpe_umad']'python_path'] = '/Library/ManagedFrameworks/Python/Python3.framework'
+node.default['cpe_umad']['shebang'] = '#!/Library/ManagedFrameworks/Python/Python3.framework/Versions/Current/bin/python3'
+```
 
 Usage
 -----
@@ -42,7 +61,6 @@ If you set `node.default['cpe_umad']['custom_resources'] = true` you will need a
 
 For example, you could tweak the below values:
 
-```ruby
 node.default['cpe_umad']['install'] = true
 node.default['cpe_umad']['custom_resources'] = true
 node.default['cpe_umad']['manage_agents'] = true
@@ -105,4 +123,3 @@ node.default['cpe_umad']['la'] = {
   ],
   'type' => 'agent',
 }
-```

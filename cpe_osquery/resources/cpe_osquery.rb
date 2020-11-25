@@ -12,7 +12,8 @@
 #
 
 resource_name :cpe_osquery
-provides :cpe_osquery
+provides :cpe_osquery, :os => ['darwin', 'linux', 'windows']
+
 default_action :manage
 
 action :manage do
@@ -245,10 +246,20 @@ action_class do # rubocop:disable Metrics/BlockLength
     %w[
       /usr/local/bin/osqueryctl
       /usr/local/bin/osqueryd
-      /usr/local/bin/osqueryi
       /etc/newsyslog.d/com.facebook.osqueryd.conf
     ].each do |osquery_file|
       file osquery_file do
+        action :delete
+      end
+    end
+    # osqueryi is a sometimes a link and sometimes a file
+    osqueryi = '/usr/local/bin/osqueryi'
+    if ::File.symlink?('/usr/local/bin/osqueryi')
+      link osqueryi do
+        action :delete
+      end
+    else
+      file osqueryi do
         action :delete
       end
     end
@@ -263,22 +274,13 @@ action_class do # rubocop:disable Metrics/BlockLength
       end
     end
     execute '/usr/sbin/pkgutil --forget com.facebook.osquery' do
-      not_if do
-        shell_out('/usr/sbin/pkgutil --pkg-info com.facebook.osquery').error?
-      end
+      not_if { shell_out('/usr/sbin/pkgutil --pkg-info com.facebook.osquery').error? }
     end
   end
 
   def windows_uninstall
-    service 'osqueryd' do
-      action :delete
-    end
     chocolatey_package 'osquery' do
-      action :purge
-    end
-    directory 'C:\ProgramData\osquery' do
-      recursive true
-      action :delete
+      action :remove
     end
   end
 end

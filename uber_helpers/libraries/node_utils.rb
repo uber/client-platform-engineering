@@ -1,5 +1,5 @@
 #
-# Cookbook Name:: uber_helprs
+# Cookbook Name:: uber_helpers
 # Libraries:: node_utils
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
@@ -129,6 +129,14 @@ class Chef
       return node.os_at_least?('10.15') && node.os_less_than?('10.16')
     end
 
+    def big_sur?
+      unless node.macos?
+        Chef::Log.warn('node.big_sur? called on non-macOS!')
+        return
+      end
+      return node.os_at_least?('11.0') || (node.os_at_least?('10.16') && node.os_less_than?('10.17'))
+    end
+
     def console_user_debian
       unless node.debian_family?
         Chef::Log.warn('node.console_user_debian called on non-Debian!')
@@ -145,6 +153,10 @@ class Chef
       Date.today > Date.parse(date)
     end
 
+    def delete_file(path_of_file)
+      ::File.delete(path_of_file) if ::File.exist?(path_of_file)
+    end
+
     def el_capitan?
       unless node.macos?
         Chef::Log.warn('node.el_capitan? called on non-OS X!')
@@ -154,16 +166,20 @@ class Chef
     end
 
     def file_age_over_24_hours?(path_of_file)
-      @file_age_over_24_hours ||=
-        begin
-          age_length = false
-          if ::File.exist?(path_of_file)
-            file_modified_time = File.mtime(path_of_file).to_date
-            diff_time = (Date.today - file_modified_time).to_i
-            age_length = diff_time > 1
-          end
-          age_length
-        end
+      file_age_over?(path_of_file, 86400)
+    end
+
+    def file_age_over?(path_of_file, seconds)
+      age_length = false
+      if path_of_file.nil?
+        Chef::Log.warn('node.file_age_over - cannot determine path')
+        return age_length
+      elsif ::File.exist?(path_of_file)
+        file_modified_time = File.mtime(path_of_file).to_i
+        diff_time = Time.now.to_i - file_modified_time
+        age_length = diff_time > seconds
+      end
+      age_length
     end
 
     def greater_than?(version1, version2)
@@ -214,7 +230,7 @@ class Chef
     end
 
     def macos_application_version(apppath, key)
-      unless macos?
+      unless node.macos?
         Chef::Log.warn('node.macos_application_version called on non-OS X!')
         return ''
       end
@@ -229,8 +245,18 @@ class Chef
       return ''
     end
 
+    def macos_system_cert_installed?(cert_name)
+      unless node.macos?
+        Chef::Log.warn('node.macos_cert_installed? called on non-OS X!')
+        return false
+      end
+      shell_out(
+        "/usr/bin/security find-certificate -c \"#{cert_name}\" -Z /Library/Keychains/System.keychain",
+      ).exitstatus.zero?
+    end
+
     def macos_package_installed?(pkg_identifier, pkg_version)
-      unless macos?
+      unless node.macos?
         Chef::Log.warn('node.macos_package_installed? called on non-OS X!')
         false
       end
@@ -246,7 +272,7 @@ class Chef
     end
 
     def macos_package_present?(pkg_identifier)
-      unless macos?
+      unless node.macos?
         Chef::Log.warn('node.macos_package_present? called on non-OS X!')
         return false
       end
@@ -279,6 +305,7 @@ class Chef
     def profile_contains_content?(profile_content, profile_identifier)
       unless node.macos?
         Chef::Log.warn('node.profile_contains_content called on non-macOS!')
+        return
       end
       _parse_profile_contents(profile_content, profile_identifier,
                               _config_profiles)
@@ -287,6 +314,7 @@ class Chef
     def profile_installed?(type, value)
       unless node.macos?
         Chef::Log.warn('node.profile_installed called on non-macOS!')
+        return
       end
       _parse_profiles(type, value, _config_profiles)
     end
@@ -310,7 +338,7 @@ class Chef
     def user_profile_installed?(type, value)
       unless node.macos?
         Chef::Log.warn('node.user_profile_installed called on non-macOS!')
-        nil
+        return
       end
       _parse_user_profiles(type, value, _user_config_profiles)
     end
@@ -341,6 +369,24 @@ class Chef
       Gem::Version.new(installed_pkg_version) <= Gem::Version.new(max_pkg)
     end
 
+    def debian_min_package_installed?(pkg_identifier, pkg_version)
+      unless node.ubuntu?
+        Chef::Log.warn('node.debian_package_installed? called on non-ubuntu system!')
+        false
+      end
+      installed_pkg_version = shell_out(
+        "dpkg -s \"#{pkg_identifier}\"",
+      ).run_command.stdout.to_s[/Version: (.*)/, 1]
+      # Compare the installed version to the maximum version
+      if installed_pkg_version.nil?
+        Chef::Log.warn("Package #{pkg_identifier} returned nil.")
+        false
+      end
+      Gem::Version.new(installed_pkg_version) >= Gem::Version.new(pkg_version)
+    rescue StandardError
+      return false
+    end
+
     def write_contents_to_file(path, contents)
       File.open(path, 'w') { |target_file| target_file.write(contents) }
     end
@@ -359,6 +405,201 @@ class Chef
         return
       end
       return node.os_at_least?('10.10') && node.os_less_than?('10.11')
+    end
+
+    def chef_version
+      node['chef_packages']['chef']['version']
+    end
+
+    def at_least_chef12?
+      at_least?(chef_version, '12.0.0')
+    end
+
+    def at_least_chef13?
+      at_least?(chef_version, '13.0.0')
+    end
+
+    def at_least_chef14?
+      at_least?(chef_version, '14.0.0')
+    end
+
+    def at_least_chef15?
+      at_least?(chef_version, '15.0.0')
+    end
+
+    def at_least_chef16?
+      at_least?(chef_version, '16.0.0')
+    end
+
+    def powershell_package_provider?(pkg_identifier)
+      status = false
+      unless node.windows?
+        Chef::Log.warn('node.powershell_package_provider? called on non-windows device!')
+        return false
+      end
+      require 'chef/mixin/powershell_out'
+      powershell_cmd = '(Get-PackageProvider -WarningAction SilentlyContinue).Name | ConvertTo-Json'
+      cmd = powershell_out(powershell_cmd).stdout.to_s
+      if cmd.nil? || cmd.empty?
+        return status
+      else
+        status = Chef::JSONCompat.parse(cmd).include?(pkg_identifier)
+      end
+      status
+    end
+
+    def powershell_module?(pkg_identifier)
+      status = false
+      unless node.windows?
+        Chef::Log.warn('node.powershell_module_installed? called on non-windows device!')
+        return false
+      end
+      require 'chef/mixin/powershell_out'
+      powershell_cmd = "(Get-InstalledModule -Name \"#{pkg_identifier}\").Name -eq \"#{pkg_identifier}\" | "\
+      'ConvertTo-Json'
+      cmd = powershell_out(powershell_cmd).stdout.chomp.strip
+      if cmd.nil? || cmd.empty?
+        return status
+      else
+        status = Chef::JSONCompat.parse(cmd)
+      end
+      status
+    end
+
+    def dell_hw?
+      unless node.windows?
+        Chef::Log.warn('node.dell_hw? called on non-windows device!')
+        return false
+      end
+      require 'chef/mixin/powershell_out'
+      powershell_cmd = '(Get-CimInstance -ClassName Win32_ComputerSystem).Manufacturer'
+      cmd = powershell_out(powershell_cmd).stdout.to_s
+      if cmd.include?('Dell')
+        return true
+      else
+        return false
+      end
+    end
+
+    def connection_reachable?(destination)
+      unless node.macos? || node.windows?
+        Chef::Log.warn('node.connection_reachable? called on non-macOS/windows device!')
+        return false
+      end
+      status = false
+      if node.macos?
+        cmd = shell_out("/sbin/ping #{destination} -c 1")
+      elsif node.windows?
+        powershell_cmd = "Test-Connection #{destination} -Count 1 -Quiet"
+        cmd = powershell_out(powershell_cmd)
+      end
+      if cmd.stdout.nil? || cmd.stdout.empty?
+        return status
+      elsif node.macos?
+        # If connected, will return 0, timeout is 68.
+        status = cmd.exitstatus.zero?
+      elsif node.windows?
+        # Powershell returns a string of True/False, which ruby can't natively handle, so we downcase everything and use
+        # JSON library to convert it to a BOOL.
+        status = Chef::JSONCompat.parse(cmd.stdout.chomp.downcase)
+      end
+      status
+    end
+
+    def macos_os_sub_version
+      @macos_os_sub_version ||=
+        begin
+          unless node.macos?
+            Chef::Log.warn('node.macos_os_sub_version called on non-OS X!')
+            return '0'
+          end
+          cmd = shell_out('/usr/sbin/sysctl -n kern.osversion').run_command.stdout
+          if cmd.nil?
+            Chef::Log.warn('node.macos_os_sub_version returned nil')
+            return '0'
+          end
+          cmd.strip
+        end
+    end
+
+    def macos_mutate_version(version)
+      # This is stupid, but it works from 10.7 and higher (to date), so this is
+      # _likely_ safe.
+      # Split the version first - 19F101 becomes ["19", "F", "101"]
+      # Reject blank values: 19F101FF would otherwise be ["19", "F", "101", "F", "", "F"]
+      split_version = version.split(/([a-z]|[A-Z])/).reject(&:empty?)
+      # Join the list with dots and replace letters with numbers
+      # ["19", "F", "101"] => 19.F.101 => 19.5.101
+      split_version.join('.').tr('ABCDEFGHIJ', '0123456789')
+    end
+
+    def mac_os_sub_version_at_least?(version)
+      Gem::Version.new(macos_mutate_version(macos_os_sub_version)) >= Gem::Version.new(macos_mutate_version(version))
+    rescue ArgumentError
+      Chef::Log.warn('node.mac_os_sub_version_at_least? given a malformed version')
+      return false
+    end
+
+    def mac_os_sub_version_at_least_or_lower?(version)
+      Gem::Version.new(macos_mutate_version(macos_os_sub_version)) <= Gem::Version.new(macos_mutate_version(version))
+    rescue ArgumentError
+      Chef::Log.warn('node.mac_os_sub_version_at_least_or_lower? given a malformed version')
+      return false
+    end
+
+    def mac_os_sub_version_greater_than?(version)
+      Gem::Version.new(macos_mutate_version(macos_os_sub_version)) > Gem::Version.new(macos_mutate_version(version))
+    rescue ArgumentError
+      Chef::Log.warn('node.mac_os_sub_version_greater_than? given a malformed version')
+      return false
+    end
+
+    def mac_os_sub_version_less_than?(version)
+      Gem::Version.new(macos_mutate_version(macos_os_sub_version)) < Gem::Version.new(macos_mutate_version(version))
+    rescue ArgumentError
+      Chef::Log.warn('node.mac_os_sub_version_less_than? given a malformed version')
+      return false
+    end
+
+    def port_open?(destination, port, timeout = 1)
+      begin
+        socket = Socket.tcp(destination, port, :connect_timeout => timeout)
+      rescue Errno::ETIMEDOUT
+        Chef::Log.warn("node.port_open? #{destination} timed out")
+        return false
+      rescue SocketError
+        Chef::Log.warn("node.port_open? cannot resolve #{destination}")
+        return false
+      rescue Errno::ECONNREFUSED
+        Chef::Log.warn("node.port_open? #{destination} connection refused")
+        return false
+      rescue Errno::EHOSTUNREACH
+        Chef::Log.warn("node.port_open? #{destination} host unreachable")
+        return false
+      end
+      if socket
+        unless socket.closed?
+          socket.close
+        end
+        true
+      else
+        false
+      end
+    end
+
+    def distinguished_name?(ou_identifier)
+      status = false
+      unless node.windows? || node.macos?
+        Chef::Log.warn('node.distinguished_name? called on non-windows or macos device!')
+        return false
+      end
+      dn = node.machine['distinguishedName']
+      if dn.nil? || dn.empty?
+        return status
+      else
+        status = dn.include?(ou_identifier)
+      end
+      return status
     end
   end
 end

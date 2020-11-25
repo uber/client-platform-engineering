@@ -13,6 +13,7 @@
 
 resource_name :cpe_apple_caching
 provides :cpe_apple_caching, :os => 'darwin'
+
 default_action :manage
 
 action :manage do
@@ -35,7 +36,7 @@ action_class do
   def configure_profile(caching_prefs)
     # Build configuration profile and pass it to cpe_profiles
     prefix = node['cpe_profiles']['prefix']
-    organization = node['organization'] ? node['organization'] : 'Uber'
+    organization = node['organization'] ? node['organization'] : 'Uber' # rubocop:disable Style/UnneededCondition
     acc_profile = {
       'PayloadIdentifier' => "#{prefix}.content_caching",
       'PayloadRemovalDisallowed' => true,

@@ -12,7 +12,8 @@
 #
 
 resource_name :cpe_chefclient
-provides :cpe_chefclient
+provides :cpe_chefclient, :os => ['darwin', 'linux', 'windows']
+
 default_action :manage
 
 action :manage do
@@ -20,7 +21,7 @@ action :manage do
   unmanage if unmanage?
 end
 
-action_class do
+action_class do # rubocop:disable Metrics/BlockLength
   def configure?
     node['cpe_chefclient']['configure']
   end
@@ -33,9 +34,11 @@ action_class do
     configs = node['cpe_chefclient']['config'].to_hash
     configs_to_manage = []
     chef_path = node['cpe_chefclient']['path']
+    chef_run_list = node['cpe_chefclient']['run_list'].to_hash
     configs.each do |conf_name, conf|
-      chef = conf['chef'].reject { |_k, v| v.nil? }
-      ohai = conf['ohai'].reject { |_k, v| v.nil? }
+      chef =  conf.key?('chef') ? conf['chef'].reject { |_k, v| v.nil? } : {}
+      ohai = conf.key?('ohai') ? conf['ohai'].reject { |_k, v| v.nil? } : {}
+      ## This should work even if only one has contents
       next if chef.empty? && ohai.empty?
       config_path = ::File.join(
         chef_path,
@@ -54,6 +57,11 @@ action_class do
     config_json = ::File.join(chef_path, '.cpe_chefclient.json')
     cleanup(configs_to_manage, config_json)
     update_json_file(configs_to_manage, config_json)
+    # Lay down the run-list
+    unless chef_run_list.nil? || chef_run_list.empty?
+      run_list_json = ::File.join(chef_path, 'run-list.json')
+      update_json_file(chef_run_list, run_list_json)
+    end
   end
 
   def unmanage
@@ -65,6 +73,14 @@ action_class do
     cleanup(configs_to_manage, config_json) if ::File.exist?(config_json)
     file config_json do
       path config_json # In case it is a symlink
+      action :delete
+    end
+    run_list_json = ::File.join(
+      node['cpe_chefclient']['path'],
+      'run-list.json',
+    )
+    file run_list_json do
+      path run_list_json # In case it is a symlink
       action :delete
     end
   end
