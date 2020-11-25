@@ -18,7 +18,7 @@ default_action :run
 
 # Enforce Zoom Settings
 action :run do
-  zoom_prefs = node['cpe_zoom'].reject { |_k, v| v.nil? }
+  zoom_prefs = node['cpe_zoom'].compact
   unless zoom_prefs.empty?
     zoom_prefs.each_key do |key|
       next if zoom_prefs[key].nil?

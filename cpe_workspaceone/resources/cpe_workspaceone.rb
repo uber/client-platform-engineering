@@ -78,7 +78,7 @@ action_class do # rubocop:disable Metrics/BlockLength
       return
     end
 
-    prefs = node['cpe_workspaceone']['cli_prefs'].reject { |_, v| v.nil? }
+    prefs = node['cpe_workspaceone']['cli_prefs'].compact
     prefs.each do |flag, val|
       unless WS1_DEFAULT_PREFS.key?(flag)
         Chef::Log.warn("cpe_workspaceone - refusing to manage unknown cli preference '#{flag}'")
@@ -190,7 +190,7 @@ action_class do # rubocop:disable Metrics/BlockLength
   end
 
   def macos_manage
-    ws1agent_prefs = node['cpe_workspaceone']['prefs'].reject { |_k, v| v.nil? }
+    ws1agent_prefs = node['cpe_workspaceone']['prefs'].compact
     unless ws1agent_prefs.empty?
       ws1agent_prefs.each_key do |key|
         next if ws1agent_prefs[key].nil?

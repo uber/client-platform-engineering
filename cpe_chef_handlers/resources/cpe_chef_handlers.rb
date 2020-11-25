@@ -31,7 +31,7 @@ action_class do
   end
 
   def configure
-    conf = node['cpe_chef_handlers']['configs'].to_h.reject { |_k, v| v.nil? }
+    conf = node['cpe_chef_handlers']['configs'].to_h.compact
     return if conf.empty? && conf.empty?
 
     config_dir = node['cpe_chef_handlers']['paths']['configdir']

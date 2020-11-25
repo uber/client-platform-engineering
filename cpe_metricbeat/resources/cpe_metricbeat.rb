@@ -33,7 +33,7 @@ action_class do # rubocop:disable Metrics/BlockLength
 
   def install
     pf = node['platform_family']
-    zip_info = node['cpe_metricbeat']['zip_info'][pf].reject { |_k, v| v.nil? }
+    zip_info = node['cpe_metricbeat']['zip_info'][pf].compact
     return if zip_info.nil? || zip_info.empty?
 
     zip_name = value_for_platform_family(
@@ -58,7 +58,7 @@ action_class do # rubocop:disable Metrics/BlockLength
 
   def configure
     # Get info about metricbeat config, rejecting unset values
-    metricbeat_conf = node['cpe_metricbeat']['config'].to_h.reject { |_k, v| v.nil? }
+    metricbeat_conf = node['cpe_metricbeat']['config'].to_h.compact
     if metricbeat_conf.empty? || metricbeat_conf.nil?
       Chef::Log.warn('config is not populated, skipping configuration')
       return

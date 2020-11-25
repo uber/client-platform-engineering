@@ -33,7 +33,7 @@ action_class do
       ssh_config_set = false
     end
 
-    cpe_known_hosts = node['cpe_ssh']['known_hosts'].reject { |_k, v| v.nil? }
+    cpe_known_hosts = node['cpe_ssh']['known_hosts'].compact
 
     # Read in /etc/ssh/ssh_config
     ssh_config = CPE::SSH.read_config

@@ -141,6 +141,7 @@ action_class do # rubocop:disable Metrics/BlockLength
       # TODO - Change this guard to re-arm machine if it hasn't checked in in a few days.
       # not_if { allowed_responses.include?(check_falconctl_registration(falconctl_path)) }
       not_if { ::File.exists?('/Library/CS/License.bin') }
+      not_if { ::File.exists?('/Library/Application Support/CrowdStrike/Falcon/License.bin') }
     end
   end
 
@@ -296,16 +297,27 @@ action_class do # rubocop:disable Metrics/BlockLength
 
   def macos_cs_file_integrity_healthy?
     healthy = true
-    # Check for these files to exist and return health check
-    [
-      '/Library/CS/kexts/Agent.kext',
-      '/Library/CS/falconctl',
-      '/Library/CS/falcond',
-      '/Library/LaunchDaemons/com.crowdstrike.userdaemon.plist',
-      '/Library/LaunchDaemons/com.crowdstrike.falcond.plist',
-    ].each do |cs_file|
-      unless ::File.exists?(cs_file)
-        healthy = false
+    if node['cpe_crowdstrike_falcon_sensor']['agent']['new_agent_logic']
+      # NOTE Agent 6.x
+      [
+        '/Applications/Falcon.app/Contents/Resources/falconctl',
+      ].each do |cs_file|
+        unless ::File.exists?(cs_file)
+          healthy = false
+        end
+      end
+    else
+      # NOTE Agent 5.x
+      [
+        '/Library/CS/kexts/Agent.kext',
+        '/Library/CS/falconctl',
+        '/Library/CS/falcond',
+        '/Library/LaunchDaemons/com.crowdstrike.userdaemon.plist',
+        '/Library/LaunchDaemons/com.crowdstrike.falcond.plist',
+      ].each do |cs_file|
+        unless ::File.exists?(cs_file)
+          healthy = false
+        end
       end
     end
     healthy

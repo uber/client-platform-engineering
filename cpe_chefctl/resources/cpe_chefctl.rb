@@ -58,7 +58,7 @@ action_class do
       end
     end
 
-    conf = node['cpe_chefctl']['config']['chefctl'].reject { |_k, v| v.nil? }
+    conf = node['cpe_chefctl']['config']['chefctl'].compact
     return if conf.empty? || conf.nil?
 
     # ToDo - Make this cross platform

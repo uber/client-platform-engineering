@@ -36,8 +36,8 @@ action_class do # rubocop:disable Metrics/BlockLength
     chef_path = node['cpe_chefclient']['path']
     chef_run_list = node['cpe_chefclient']['run_list'].to_hash
     configs.each do |conf_name, conf|
-      chef =  conf.key?('chef') ? conf['chef'].reject { |_k, v| v.nil? } : {}
-      ohai = conf.key?('ohai') ? conf['ohai'].reject { |_k, v| v.nil? } : {}
+      chef =  conf.key?('chef') ? conf['chef'].compact : {}
+      ohai = conf.key?('ohai') ? conf['ohai'].compact : {}
       ## This should work even if only one has contents
       next if chef.empty? && ohai.empty?
       config_path = ::File.join(

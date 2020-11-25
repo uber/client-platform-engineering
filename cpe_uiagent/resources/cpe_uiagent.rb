@@ -17,7 +17,7 @@ provides :cpe_uiagent, :os => 'darwin'
 default_action :run
 
 action :run do
-  uiagent_prefs = node['cpe_uiagent'].reject { |_k, v| v.nil? }
+  uiagent_prefs = node['cpe_uiagent'].compact
   if uiagent_prefs.empty?
     Chef::Log.info("#{cookbook_name}: No prefs found.")
     return
