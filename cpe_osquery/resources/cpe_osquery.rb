@@ -142,7 +142,7 @@ action_class do # rubocop:disable Metrics/BlockLength
     end
     service_type, service_name = service_info.first
     flag_file = ::File.join(osquery_dir, 'osquery.flags')
-    options = node['cpe_osquery']['options'].reject { |_k, v| v.nil? }
+    options = node['cpe_osquery']['options'].compact
     # Lay down config via osquery flags file
     template flag_file do
       source 'osquery.flags.erb'

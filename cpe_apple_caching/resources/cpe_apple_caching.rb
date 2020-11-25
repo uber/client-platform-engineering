@@ -25,7 +25,7 @@ action_class do
   def configure
     return unless node['cpe_apple_caching']['configure']
     # Get info about caching config, rejecting unset values
-    caching_prefs = node['cpe_apple_caching']['prefs'].reject { |_k, v| v.nil? }
+    caching_prefs = node['cpe_apple_caching']['prefs'].compact
     if caching_prefs.empty? || caching_prefs.nil?
       Chef::Log.warn('caching config is not populated, skipping configuration')
       return

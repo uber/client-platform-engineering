@@ -38,7 +38,7 @@ action_class do # rubocop:disable Metrics/BlockLength
   def install
     return unless node['cpe_sal']['install']
     # Get info about the sal_scripts pkg, rejecting unset values
-    pkg_info = node['cpe_sal']['scripts_pkg'].reject { |_k, v| v.nil? }
+    pkg_info = node['cpe_sal']['scripts_pkg'].compact
     if pkg_info.empty? || pkg_info.nil?
       Chef::Log.warn('scripts_pkg is not populated, skipping pkg install')
       return
@@ -83,7 +83,7 @@ action_class do # rubocop:disable Metrics/BlockLength
   def configure
     return unless node['cpe_sal']['configure']
     # Get info about sal config, rejecting unset values
-    sal_prefs = node['cpe_sal']['config'].reject { |_k, v| v.nil? }
+    sal_prefs = node['cpe_sal']['config'].compact
     if sal_prefs.empty? || sal_prefs.nil?
       Chef::Log.warn('config is not populated, skipping configuration')
       return
@@ -196,7 +196,7 @@ action_class do # rubocop:disable Metrics/BlockLength
   def macos_plugins
     # Get plugins dir from cpe_sal library
     plugins_dir = CPE::Sal.plugins_dir
-    plugins = node['cpe_sal']['plugins'].reject { |_k, v| v.nil? }
+    plugins = node['cpe_sal']['plugins'].compact
     if plugins.empty? && plugins.empty?
       Chef::Log.warn('plugins is not populated, skipping plugins install')
       return
@@ -227,7 +227,7 @@ action_class do # rubocop:disable Metrics/BlockLength
     plugins_dir = CPE::Sal.plugins_dir
     if ::File.exist?(plugins_dir)
       existing_plugins = CPE::Sal.existing_plugins
-      plugins = node['cpe_sal']['plugins'].reject { |_k, v| v.nil? }
+      plugins = node['cpe_sal']['plugins'].compact
       # If plugin directory exists on disk, but isn't managed, remove it.
       existing_plugins.each do |plugin|
         existing_plugin = plugin.split('_')[0]

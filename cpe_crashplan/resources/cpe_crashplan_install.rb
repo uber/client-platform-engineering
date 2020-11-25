@@ -76,7 +76,7 @@ action_class do
   end
 
   def upgrade_crashplan?
-    cp = node['cpe_crashplan'].reject { |_k, v| v.nil? }
+    cp = node['cpe_crashplan'].compact
 
     ver = node.macos_application_version(
       '/Applications/CrashPlan.app/Contents/Info.plist',
@@ -95,7 +95,7 @@ action_class do
   end
 
   def configure
-    cp = node['cpe_crashplan'].reject { |_k, v| v.nil? }
+    cp = node['cpe_crashplan'].compact
     # lay down the deploy properties config file which tells CP how to
     # communicate with the CP server.
     template "#{cp['pkg']['base_path']}/deploy.properties" do
@@ -143,7 +143,7 @@ action_class do
     upgrade_needed = upgrade_crashplan? if node.macos?
     return if installed && !upgrade_needed # Already installed and correct ver
 
-    cp = node['cpe_crashplan'].reject { |_k, v| v.nil? }
+    cp = node['cpe_crashplan'].compact
 
     # Start upgrade only proceedures
     # save guid to var
@@ -184,7 +184,7 @@ action_class do
 
   def windows_install
     return unless node.windows?
-    cp = node['cpe_crashplan'].reject { |_k, v| v.nil? }
+    cp = node['cpe_crashplan'].compact
 
     # Do not do upgrades anymore because it's not officially supported
     return if ::File.exists?('C:\\Program Files\\CrashPlan\\CrashPlanService.exe')

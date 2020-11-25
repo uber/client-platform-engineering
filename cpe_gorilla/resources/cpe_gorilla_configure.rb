@@ -34,8 +34,8 @@ action_class do
     return unless node['cpe_gorilla']['install']
 
     # Get info about gorilla preferences, rejecting unset values
-    gorilla_prefs = node['cpe_gorilla']['preferences'].reject { |_k, v| v.nil? }
-    local_manifest = node['cpe_gorilla']['local_manifest'].reject { |_k, v| v.nil? }
+    gorilla_prefs = node['cpe_gorilla']['preferences'].compact
+    local_manifest = node['cpe_gorilla']['local_manifest'].compact
 
     if gorilla_prefs.empty? || gorilla_prefs.nil?
       # Don't install gorilla (for now) if no config is set
@@ -67,7 +67,7 @@ action_class do
     end
 
     # Get info about gorilla install, rejecting unset values
-    exe_info = node['cpe_gorilla']['exe'].reject { |_k, v| v.nil? }
+    exe_info = node['cpe_gorilla']['exe'].compact
     if exe_info.empty? || exe_info.nil?
       Chef::Log.warn('gorilla package is not populated, skipping install')
       return

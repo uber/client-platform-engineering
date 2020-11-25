@@ -33,6 +33,7 @@ when 'debian'
     '/opt/CrowdStrike/falconctl'
   default['cpe_crowdstrike_falcon_sensor']['pkg']['dpkg_version'] = nil
 when 'mac_os_x'
+  default['cpe_crowdstrike_falcon_sensor']['agent']['new_agent_logic'] = false
   default['cpe_crowdstrike_falcon_sensor']['agent']['falconctl_path'] =
     '/Library/CS/falconctl'
   default['cpe_crowdstrike_falcon_sensor']['pkg']['mac_os_x_pkg_receipt'] =

@@ -97,7 +97,8 @@ action_class do # rubocop:disable Metrics/BlockLength
     # daemons. cpe_launchd will turn it back on later in the run so we
     # don't have a mismatch in what's loaded in memory and what's on disk
     umad_files.each do |item|
-      if ['umad', 'umad_check_dep_record', 'umad_trigger_nag'].include?(item)
+      umad_bins = ['umad', 'umad_check_dep_record', 'umad_trigger_nag']
+      if umad_bins.include?(item)
         if ::File.exists?(node['cpe_umad']['python_path'])
           # Python file
           template "/Library/umad/Resources/#{item}" do

@@ -47,7 +47,7 @@ action_class do
   def install
     # JSON
     json_path = node['cpe_nudge']['json_path']
-    json_prefs = node['cpe_nudge']['json_prefs'].to_h.reject { |_k, v| v.nil? }
+    json_prefs = node['cpe_nudge']['json_prefs'].to_h.compact
 
     if json_prefs.empty? || json_prefs.nil?
       Chef::Log.warn('config is not populated, skipping configuration')

@@ -18,7 +18,7 @@ default_action :config
 
 # Enforce Slack Settings
 action :config do
-  slack_prefs = node['cpe_slack'].reject { |_k, v| v.nil? }
+  slack_prefs = node['cpe_slack'].compact
   if slack_prefs.empty?
     Chef::Log.info("#{cookbook_name}: No prefs found.")
     return
