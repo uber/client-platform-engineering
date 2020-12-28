@@ -60,7 +60,11 @@ class Chef
 
       if profiles.key?('_computerlevel')
         profiles['_computerlevel'].each do |profile|
-          return true if profile[type] == value
+          ls_value = profile[type]
+          if type == 'ProfileDisplayName' && ls_value.include?('/V_')
+            ls_value = ls_value.split('/V_')[0...-1].join('')
+          end
+          return true if ls_value == value
         end
       end
       false
@@ -88,7 +92,11 @@ class Chef
 
       if profiles.key?(node.console_user)
         profiles[node.console_user].each do |profile|
-          return true if profile[type] == value
+          ls_value = profile[type]
+          if type == 'ProfileDisplayName' && ls_value.include?('/V_')
+            ls_value = ls_value.split('/V_')[0...-1].join('')
+          end
+          return true if ls_value == value
         end
       end
       false
