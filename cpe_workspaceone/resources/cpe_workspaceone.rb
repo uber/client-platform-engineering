@@ -46,7 +46,7 @@ action_class do # rubocop:disable Metrics/BlockLength
   end
 
   def manage_cli_config?
-    node['cpe_workspaceone']['manage_cli_config']
+    node['cpe_workspaceone']['manage_cli']
   end
 
   def uninstall?
