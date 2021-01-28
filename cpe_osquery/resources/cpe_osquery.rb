@@ -64,17 +64,25 @@ action_class do # rubocop:disable Metrics/BlockLength
 
   def macos_install(osquery_pkg)
     # Install it!
+    ld_label = 'com.facebook.osqueryd'
     cpe_remote_pkg 'osquery' do
       app osquery_pkg['name']
       version osquery_pkg['version']
       checksum osquery_pkg['checksum']
       receipt osquery_pkg['receipt']
+      if ::File.exists?("/Library/LaunchDaemons/#{ld_label}.plist")
+        notifies :restart, "launchd[#{ld_label}]", :immediately
+      end
     end
     # Make sure logs get rotated
     syslog_conf = 'com.facebook.osqueryd.conf'
     syslog_conf_path = ::File.join('/etc/newsyslog.d', syslog_conf)
     cookbook_file syslog_conf_path do
       source syslog_conf
+    end
+    # Triger launchd restart
+    launchd ld_label do
+      action :nothing
     end
   end
 

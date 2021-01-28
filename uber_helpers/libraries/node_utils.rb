@@ -54,13 +54,17 @@ class Chef
     # term is the term to match against
     # key is what key to match (ProfileIdentifier, ProfileDisplayName, etc)
     # profiles is a hash containing all the currently installed profiles
-    def _parse_profiles(type, value, profiles)
+    def _parse_profiles(type, value, profiles, mdm = nil)
       fail 'profiles XML parsing cannot be nil!' if profiles.nil?
       fail 'profiles XML parsing must be a Hash!' unless profiles.is_a?(Hash)
 
       if profiles.key?('_computerlevel')
         profiles['_computerlevel'].each do |profile|
-          return true if profile[type] == value
+          profile_type = profile[type]
+          if mdm == 'ws1' && type == 'ProfileDisplayName'
+            profile_type = profile_type.split('/V_')[0]
+          end
+          return true if profile_type == value
         end
       end
       false
@@ -82,13 +86,17 @@ class Chef
       false
     end
 
-    def _parse_user_profiles(type, value, profiles)
+    def _parse_user_profiles(type, value, profiles, mdm = nil)
       fail 'profiles XML parsing cannot be nil!' if profiles.nil?
       fail 'profiles XML parsing must be a Hash!' unless profiles.is_a?(Hash)
 
       if profiles.key?(node.console_user)
         profiles[node.console_user].each do |profile|
-          return true if profile[type] == value
+          profile_type = profile[type]
+          if mdm == 'ws1' && type == 'ProfileDisplayName'
+            profile_type = profile_type.split('/V_')[0]
+          end
+          return true if profile_type == value
         end
       end
       false
@@ -103,6 +111,34 @@ class Chef
             node.console_user,
           )
         end
+    end
+
+    def _ws1_profile_version(display_name, profiles)
+      fail 'profiles XML parsing cannot be nil!' if profiles.nil?
+      fail 'profiles XML parsing must be a Hash!' unless profiles.is_a?(Hash)
+      # WS1 will never have a V_0 profile
+      profile_version = '0'
+      if profiles.key?('_computerlevel')
+        profiles['_computerlevel'].each do |profile|
+          profile_contents = profile['ProfileDisplayName'].split('/V_')
+          return profile_contents[1] if profile_contents[0] == display_name
+        end
+      end
+      profile_version
+    end
+
+    def _ws1_user_profile_version(display_name, profiles)
+      fail 'profiles XML parsing cannot be nil!' if profiles.nil?
+      fail 'profiles XML parsing must be a Hash!' unless profiles.is_a?(Hash)
+      # WS1 will never have a V_0 profile
+      profile_version = '0'
+      if profiles.key?(node.console_user)
+        profiles[node.console_user].each do |profile|
+          profile_contents = profile['ProfileDisplayName'].split('/V_')
+          return profile_contents[1] if profile_contents[0] == display_name
+        end
+      end
+      profile_version
     end
 
     def at_least?(version1, version2)
@@ -311,12 +347,12 @@ class Chef
                               _config_profiles)
     end
 
-    def profile_installed?(type, value)
+    def profile_installed?(type, value, mdm = nil)
       unless node.macos?
         Chef::Log.warn('node.profile_installed called on non-macOS!')
         return
       end
-      _parse_profiles(type, value, _config_profiles)
+      _parse_profiles(type, value, _config_profiles, mdm)
     end
 
     def sierra?
@@ -335,12 +371,12 @@ class Chef
       return node['platform_version'].eql?('14.04')
     end
 
-    def user_profile_installed?(type, value)
+    def user_profile_installed?(type, value, mdm = nil)
       unless node.macos?
         Chef::Log.warn('node.user_profile_installed called on non-macOS!')
         return
       end
-      _parse_user_profiles(type, value, _user_config_profiles)
+      _parse_user_profiles(type, value, _user_config_profiles, mdm)
     end
 
     def win_min_package_installed?(pkg_identifier, min_pkg)
@@ -389,6 +425,42 @@ class Chef
 
     def write_contents_to_file(path, contents)
       File.open(path, 'w') { |target_file| target_file.write(contents) }
+    end
+
+    def ws1_min_profile_installed?(display_name, version)
+      unless node.macos?
+        Chef::Log.warn('node.ws1_min_profile_installed called on non-macOS!')
+        return
+      end
+      installed_version = _ws1_profile_version(display_name, _config_profiles)
+      if installed_version == '0'
+        Chef::Log.warn('node.ws1_min_profile_installed did not find profile installed!')
+        return false
+      end
+      if installed_version.nil?
+        Chef::Log.warn('node.ws1_min_profile_installed profile compared does not have a version. '\
+          'Is this actually a ws1 profile?')
+        return false
+      end
+      Gem::Version.new(installed_version) >= Gem::Version.new(version)
+    end
+
+    def ws1_min_user_profile_installed?(display_name, version)
+      unless node.macos?
+        Chef::Log.warn('node.ws1_user_min_profile_installed called on non-macOS!')
+        return
+      end
+      installed_version = _ws1_user_profile_version(display_name, _user_config_profiles)
+      if installed_version == '0'
+        Chef::Log.warn('node.ws1_min_user_profile_installed did not find profile installed!')
+        return false
+      end
+      if installed_version.nil?
+        Chef::Log.warn('node.ws1_min_user_profile_installed profile compared does not have a version. '\
+          'Is this actually a ws1 profile?')
+        return false
+      end
+      Gem::Version.new(installed_version) >= Gem::Version.new(version)
     end
 
     def xenial?
@@ -482,20 +554,22 @@ class Chef
     end
 
     def connection_reachable?(destination)
-      unless node.macos? || node.windows?
-        Chef::Log.warn('node.connection_reachable? called on non-macOS/windows device!')
+      unless node.macos? || node.windows? || node.ubuntu?
+        Chef::Log.warn('node.connection_reachable? called on non-macOS/windows/ubuntu device!')
         return false
       end
       status = false
       if node.macos?
         cmd = shell_out("/sbin/ping #{destination} -c 1")
+      elsif node.ubuntu?
+        cmd = shell_out("/bin/ping #{destination} -c 2")
       elsif node.windows?
         powershell_cmd = "Test-Connection #{destination} -Count 1 -Quiet"
         cmd = powershell_out(powershell_cmd)
       end
       if cmd.stdout.nil? || cmd.stdout.empty?
         return status
-      elsif node.macos?
+      elsif node.macos? || node.ubuntu?
         # If connected, will return 0, timeout is 68.
         status = cmd.exitstatus.zero?
       elsif node.windows?
@@ -600,6 +674,25 @@ class Chef
         status = dn.include?(ou_identifier)
       end
       return status
+    end
+
+    # Return the Version Number as a String.
+    # nil value if the package is not installed.
+    def installed_pkg_version(pkg_identifier)
+      unless macos?
+        Chef::Log.warn('node.installed_pkg_version called on non-OS X!')
+        return nil
+      end
+      installed_pkg_version = shell_out(
+        "/usr/sbin/pkgutil --pkg-info \"#{pkg_identifier}\"",
+      ).run_command.stdout.to_s[/version: (.*)/, 1]
+      Chef::Log.warn("Package #{pkg_identifier} returned nil.") if installed_pkg_version.nil?
+      installed_pkg_version
+    end
+
+    def installed_pkg_major_version(pkg_identifier)
+      version = installed_pkg_version(pkg_identifier)
+      version.split('.')[0] unless version.nil?
     end
   end
 end
