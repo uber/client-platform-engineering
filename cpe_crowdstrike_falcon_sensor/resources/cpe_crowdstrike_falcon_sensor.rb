@@ -100,11 +100,30 @@ action_class do # rubocop:disable Metrics/BlockLength
     end
   end
 
+  def macos_install_compat_check(file)
+    if ::File.exists?(file)
+      return shell_out("installer -volinfo -pkg #{file} -plist").stdout.include?('MountPoint')
+    end
+    Chef::Log.warn("#{file} does not exist.")
+    return false
+  end
+
   def macos_install(falconctl_path, receipt, reg_token)
     # Force a re-install of CrowdStrike if files are missing
     execute "/usr/sbin/pkgutil --forget #{receipt}" do
       not_if { macos_cs_file_integrity_healthy? }
       not_if { shell_out("/usr/sbin/pkgutil --pkg-info #{receipt}").error? }
+    end
+
+    file_name = "#{node['cpe_crowdstrike_falcon_sensor']['pkg']['app_name']}-"\
+    "#{node['cpe_crowdstrike_falcon_sensor']['pkg']['version']}.pkg"
+    file_path = ::File.join(Chef::Config[:file_cache_path], file_name)
+
+    cpe_remote_file node['cpe_crowdstrike_falcon_sensor']['pkg']['app_name'] do
+      backup 1
+      file_name file_name
+      checksum node['cpe_crowdstrike_falcon_sensor']['pkg']['checksum']
+      path file_path
     end
 
     # https://falcon.crowdstrike.com/support/documentation/22/falcon-sensor-for-mac-deployment-guide
@@ -115,6 +134,8 @@ action_class do # rubocop:disable Metrics/BlockLength
       version node['cpe_crowdstrike_falcon_sensor']['pkg']['version']
       checksum node['cpe_crowdstrike_falcon_sensor']['pkg']['checksum']
       receipt receipt
+      only_if { macos_install_compat_check(file_path) }
+      backup 1
     end
     # Enroll device into server with registration token, unless it's connecting or connected as the status.
     allowed_responses = [
@@ -297,7 +318,10 @@ action_class do # rubocop:disable Metrics/BlockLength
 
   def macos_cs_file_integrity_healthy?
     healthy = true
-    if node['cpe_crowdstrike_falcon_sensor']['agent']['new_agent_logic']
+    # Get the major version installed so we can use the right checks.
+    pkg_id = node['cpe_crowdstrike_falcon_sensor']['pkg']['mac_os_x_pkg_receipt']
+    major_version = node.installed_pkg_major_version(pkg_id)
+    if major_version.eql?('6')
       # NOTE Agent 6.x
       [
         '/Applications/Falcon.app/Contents/Resources/falconctl',
@@ -306,7 +330,7 @@ action_class do # rubocop:disable Metrics/BlockLength
           healthy = false
         end
       end
-    else
+    elsif major_version.eql?('5')
       # NOTE Agent 5.x
       [
         '/Library/CS/kexts/Agent.kext',

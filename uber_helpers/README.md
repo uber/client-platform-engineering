@@ -252,7 +252,7 @@ Usage
   end
   ```
 
-* node.profile_installed?
+* node.profile_installed?(payload_type, conditional_value, mdm_type)
   Returns a boolean value stating whether a specific macOS device profile is installed. Profile can be looked up several ways
 
   ```
@@ -263,6 +263,16 @@ Usage
   end
 
   if node.profile_installed?('ProfileIdentifier', 'com.uber.mdm.example')
+    do_thing
+  else
+    do_other_thing
+  end
+  ```
+
+  Due to how Workspace One handles profiles, it makes it a bit harder to determine if a profile is installed. By passing the mdm_type of `ws1`, you can invoke a different logic pattern
+
+  ```
+  if node.profile_installed?('ProfileDisplayName', 'Intelligent Hub Privacy Preferences', 'ws1')
     do_thing
   else
     do_other_thing
@@ -291,7 +301,7 @@ Usage
   end
   ```
 
-* node.user_profile_installed?
+* node.user_profile_installed?(payload_type, conditional_value, mdm_type)
   Returns a boolean value stating whether a specific macOS user profile is installed. Profile can be looked up several ways
 
   ```
@@ -302,6 +312,16 @@ Usage
   end
 
   if node.user_profile_installed?('ProfileIdentifier', 'com.uber.mdm.userprofileexample')
+    do_thing
+  else
+    do_other_thing
+  end
+  ```
+
+  Due to how Workspace One handles profiles, it makes it a bit harder to determine if a profile is installed. By passing the mdm_type of `ws1`, you can invoke a different logic pattern
+
+  ```
+  if node.user_profile_installed?('ProfileDisplayName', 'Airwatch Verification Profile for Mac devices', 'ws1')
     do_thing
   else
     do_other_thing
@@ -330,16 +350,16 @@ Usage
   end
   ```
 
-  * node.debian_min_package_installed?
-    Returns a boolean value stating whether a specific Debian package is installed with a minimum version
+* node.debian_min_package_installed?
+  Returns a boolean value stating whether a specific Debian package is installed with a minimum version
 
-    ```
-    if debian_min_package_installed?('slack-desktop', '4.3.2')
-      do_thing
-    else
-      do_other_thing
-    end
-    ```
+  ```
+  if debian_min_package_installed?('slack-desktop', '4.3.2')
+    do_thing
+  else
+    do_other_thing
+  end
+  ```
 
 * node.write_contents_to_file
   Helper function to write contents to a file
@@ -349,6 +369,27 @@ Usage
     'key' => 'value',
   }
   example_pretty_json = node.write_contents_to_file('/a/path', Chef::JSONCompat.to_json_pretty(json_contents))
+  ```
+
+* node.ws1_min_profile_installed?(profile_name, version)
+  Returns a boolean value stating whether a specific Workspace One device profile is installed with the minimum required version.
+
+  ```
+  if node.user_profile_installed?('Intelligent Hub Privacy Preferences', 1)
+    do_thing
+  else
+    do_other_thing
+  end
+  ```
+
+* node.ws1_min_user_profile_installed?(profile_name, version)
+  Returns a boolean value stating whether a specific Workspace One user profile is installed with the minimum required version.
+  ```
+  if node.user_profile_installed?('Airwatch Verification Profile for Mac devices', 1)
+    do_thing
+  else
+    do_other_thing
+  end
   ```
 
 * node.xenial?
