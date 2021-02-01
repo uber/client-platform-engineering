@@ -22,6 +22,15 @@ default['cpe_anyconnect'] = {
     'checksum' => nil,
     'version' => nil,
   },
+  'modules' => [
+    {
+      'name' => nil,
+      'display_name' => nil,
+      'version' => nil,
+      'checksum' => nil,
+      'install_args' => nil,
+    },
+  ],
   'uninstall' => false,
 }
 
