@@ -150,6 +150,22 @@ action_class do # rubocop:disable Metrics/BlockLength
     elsif anyconnect_service_status.include?('Stopped')
       Chef::Log.info('Anyconnect service [vpnagent] is stopped')
     end
+
+    cisco_install_path = ::File.join(ENV['ProgramFiles(x86)'], 'Cisco/Cisco AnyConnect Secure Mobility Client')
+    app_link = ::File.join(cisco_install_path, 'vpnui.exe')
+    if node['cpe_anyconnect']['desktop_shortcut']
+      # Create Icon for Cisco AnyConnect Secure Mobility Client
+      windows_shortcut desktop_link do
+        iconlocation ::File.join(cisco_install_path, 'res/GUI.ico')
+        description 'Cisco AnyConnect Secure Mobility Client'
+        target app_link
+        only_if { ::File.exist?(app_link) }
+        not_if { ::File.exist?(desktop_link) }
+      end
+    else
+      # Remove Icon for Cisco AnyConnect Secure Mobility Client
+      remove_desktop_link
+    end
   end
 
   def uninstall
@@ -198,6 +214,9 @@ action_class do # rubocop:disable Metrics/BlockLength
         only_if { node['packages'].key?(pkg['display_name']) }
       end
     end
+
+    # Remove Desktop Link
+    remove_desktop_link
   end
 
   def cache_path
@@ -254,5 +273,15 @@ action_class do # rubocop:disable Metrics/BlockLength
     return nil unless node.windows?
     status = powershell_out('(Get-Service vpnagent).status').stdout.to_s.chomp
     status.empty? ? nil : status
+  end
+
+  def desktop_link
+    ::File.join(ENV['PUBLIC'], 'Desktop', 'Cisco Anyconnect Secure Mobility Client.lnk')
+  end
+
+  def remove_desktop_link
+    file desktop_link do
+      action :delete
+    end
   end
 end

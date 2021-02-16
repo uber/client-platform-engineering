@@ -34,6 +34,7 @@ Attributes
 * node['cpe_anyconnect']['modules']['version']
 * node['cpe_anyconnect']['modules']['checksum']
 * node['cpe_anyconnect']['modules']['install_args']
+* node['cpe_anyconnect']['desktop_shortcut']
 * node['cpe_anyconnect']['uninstall']
 
 A base install config might look like this
@@ -76,4 +77,5 @@ node.default['cpe_anyconnect']['modules'] = [
     'checksum' => 'dee58cc7a9d44db1afefd7fc3718237309a43e4491ce8a5d9b94b656189e63d7',
   },
 ]
+node.default['cpe_anyconnect']['desktop_shortcut'] = true
 ```

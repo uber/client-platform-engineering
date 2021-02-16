@@ -31,6 +31,7 @@ default['cpe_anyconnect'] = {
       'install_args' => nil,
     },
   ],
+  'desktop_shortcut' => false,
   'uninstall' => false,
 }
 
