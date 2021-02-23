@@ -1,6 +1,6 @@
 #
 # Cookbook Name:: cpe_nudge
-# Resources:: cpe_nudge_json
+# Resources:: cpe_nudge_python_json
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 #
@@ -11,8 +11,8 @@
 # LICENSE file in the root directory of this source tree.
 #
 
-resource_name :cpe_nudge_json
-provides :cpe_nudge_json, :os => 'darwin'
+resource_name :cpe_nudge_python_json
+provides :cpe_nudge_python_json, :os => 'darwin'
 
 default_action :manage
 
@@ -22,32 +22,30 @@ end
 
 action_class do
   def install?
-    node['cpe_nudge']['manage_json']
+    node['cpe_nudge']['nudge-python']['manage_json']
   end
 
   def uninstall?
-    node['cpe_nudge']['uninstall']
+    node['cpe_nudge']['nudge-python']['uninstall']
   end
 
-  def label
-    # This portion is taken from cpe_launchd. Since we use cpe_launchd to
-    # create our launch agent, the label specified in the attributes will not
-    # match the actual label/path that's created. Doing this will result in
-    # the right file being targeted.
-    label = node['cpe_nudge']['la_identifier']
-    if label.start_with?('com')
-      name = label.split('.')
-      name.delete('com')
-      label = name.join('.')
-      label = "#{node['cpe_launchd']['prefix']}.#{label}"
-    end
-    label
+  def launchagent_label
+    node.nudge_launchctl_label('python', 'launchagent_identifier')
+  end
+
+  def launchagent_path
+    node.nudge_launchctl_path('python', 'launchagent_identifier')
   end
 
   def install
+    unless ::File.exists?(node['cpe_nudge']['nudge-python']['python_path'])
+      Chef::Log.warn("Python defined in node['cpe_nudge']['nudge-python']['python_path'] is not installed.")
+      return
+    end
+
     # JSON
-    json_path = node['cpe_nudge']['json_path']
-    json_prefs = node['cpe_nudge']['json_prefs'].to_h.compact
+    json_path = node['cpe_nudge']['nudge-python']['json_path']
+    json_prefs = node['cpe_nudge']['nudge-python']['json_prefs'].to_h.compact
 
     if json_prefs.empty? || json_prefs.nil?
       Chef::Log.warn('config is not populated, skipping configuration')
@@ -59,17 +57,14 @@ action_class do
     # mismatch in what's loaded in memory and what's on disk
     file json_path do
       mode '0644'
-      owner 'root'
-      group 'wheel'
-      action :create
+      owner root_owner
+      group root_group
       content Chef::JSONCompat.to_json_pretty(json_prefs)
-      if ::File.exists?("/Library/LaunchAgents/#{label}.plist")
-        notifies :disable, "launchd[#{label}]", :immediately
-      end
+      notifies :disable, "launchd[#{launchagent_label}]", :immediately if ::File.exists?(launchagent_path)
     end
 
     # Triggered Launch Agent action
-    launchd label do
+    launchd launchagent_label do
       action :nothing
       type 'agent'
     end

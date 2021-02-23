@@ -13,6 +13,10 @@
 
 return unless node.macos?
 
-cpe_nudge_install 'Apply nudge install'
-cpe_nudge_json 'Apply nudge json configuration'
-cpe_nudge_la 'Apply nudge agent configuration'
+cpe_nudge_python_install 'Apply nudge-python install'
+cpe_nudge_python_json 'Apply nudge-python json configuration'
+cpe_nudge_python_launchagent 'Apply nudge-python agent configuration'
+
+cpe_nudge_swift_install 'Apply nudge-swift install'
+cpe_nudge_swift_json 'Apply nudge-swift json configuration'
+cpe_nudge_swift_launchctl 'Apply nudge-swift launchctl configuration'

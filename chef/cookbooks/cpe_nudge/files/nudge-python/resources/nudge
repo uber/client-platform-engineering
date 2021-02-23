@@ -1,4 +1,4 @@
-<%= node['cpe_nudge']['shebang'] %>
+#!/Library/ManagedFrameworks/Python/Python3.framework/Versions/Current/bin/python3
 # -*- coding: utf-8 -*-
 '''nudge - python wrapper for major OS updates.'''
 import json
@@ -308,8 +308,7 @@ def download_apple_updates():
 
     cmd = [
         '/usr/sbin/softwareupdate',
-        '-da',
-        '--force'
+        '-da'
     ]
 
     try:
