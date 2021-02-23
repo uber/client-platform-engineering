@@ -5,8 +5,12 @@
 /chef/cookbooks/cpe_anyconnect/files/default/anyconnect/pkg/*.xml
 /chef/cookbooks/cpe_anyconnect/files/default/anyconnect/profiles/*/*.xml
 /chef/cookbooks/cpe_anyconnect/files/default/anyconnect/profiles/*/*.json
-/chef/cookbooks/cpe_nudge/files/custom/company_logo.png
-/chef/cookbooks/cpe_nudge/files/custom/update_ss.png
+/chef/cookbooks/cpe_nudge/files/nudge-python/custom/company_logo.png
+/chef/cookbooks/cpe_nudge/files/nudge-python/custom/update_ss.png
+/chef/cookbooks/cpe_nudge/files/nudge-swift/custom/logoDark.png
+/chef/cookbooks/cpe_nudge/files/nudge-swift/custom/logoLight.png
+/chef/cookbooks/cpe_nudge/files/nudge-swift/custom/screenShotDark.png
+/chef/cookbooks/cpe_nudge/files/nudge-swift/custom/screenShotLight.png
 /chef/cookbooks/cpe_umad/files/custom/company_logo.png
 /chef/cookbooks/cpe_umad/files/custom/nag_ss.png
 /chef/cookbooks/cpe_umad/files/custom/uamdm_ss.png
