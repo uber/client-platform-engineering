@@ -4,7 +4,6 @@
   "name": "Zoom Web Client Override",
   "version": "0.0.14",
   "description": "Join Zoom meetings within Google Chrome on Chrome OS devices",
-  "author": "Tristan Thomas",
   "background": {
     "scripts": ["background.js"],
     "persistent": false
