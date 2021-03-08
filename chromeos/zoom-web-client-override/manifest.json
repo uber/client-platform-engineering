@@ -1,0 +1,21 @@
+{
+  "update_url": "https://clients2.google.com/service/update2/crx",
+  "manifest_version": 2,
+  "name": "Zoom Web Client Override",
+  "version": "0.0.14",
+  "description": "Join Zoom meetings within Google Chrome on Chrome OS devices",
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": false
+  },
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "ruleset_1",
+        "enabled": false,
+        "path": "rules.json"
+      }
+    ]
+  },
+  "permissions": ["declarativeNetRequest", "https://*.zoom.us/*"]
+}

@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "priority": 1,
+    "action": {
+      "type": "redirect",
+      "redirect": { "regexSubstitution": "\\1wc/join/\\2" }
+    },
+    "condition": {
+      "regexFilter": "(.*.zoom.us/)j/(\\d+)",
+      "resourceTypes": ["main_frame"]
+    }
+  },
+  {
+    "id": 2,
+    "priority": 1,
+    "action": {
+      "type": "redirect",
+      "redirect": { "regexSubstitution": "\\1wc/\\2/start" }
+    },
+    "condition": {
+      "regexFilter": "(.*.zoom.us/)s/(\\d+)",
+      "resourceTypes": ["main_frame"]
+    }
+  }
+]
