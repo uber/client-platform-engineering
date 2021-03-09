@@ -1,5 +1,5 @@
-#
 # Cookbook Name:: cpe_osquery
+#
 # Resources:: cpe_osquery
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
@@ -18,8 +18,8 @@ default_action :manage
 
 action :manage do
   install if install?
-  manage if manage?
-  uninstall if !install? && !manage? && uninstall?
+  manage if manage? && !uninstall?
+  uninstall if uninstall? && !install?
 end
 
 action_class do # rubocop:disable Metrics/BlockLength
@@ -36,39 +36,29 @@ action_class do # rubocop:disable Metrics/BlockLength
   end
 
   def install
-    # Root preferences for agent and package
-    osquery_pkg = node['cpe_osquery']['pkg'].to_hash
-
-    debian_install(osquery_pkg) if node.debian_family?
-    macos_install(osquery_pkg) if node.macos?
-    windows_install(osquery_pkg) if node.windows?
+    debian_install if node.debian_family?
+    macos_install if node.macos?
+    windows_install if node.windows?
   end
 
-  def debian_install(osquery_pkg)
-    file_name = "#{osquery_pkg['name']}-"\
-      "#{osquery_pkg['version']}.deb"
-    deb_path = ::File.join(Chef::Config[:file_cache_path], file_name)
-    cpe_remote_file osquery_pkg['name'] do
-      backup 1
-      file_name file_name
-      checksum osquery_pkg['checksum']
-      path deb_path
-    end
+  def debian_install
+    # Download installer package
+    download_package
     # Install the package
-    dpkg_package file_name do
-      source deb_path
+    dpkg_package pkg_filename do
+      source pkg_filepath
       version osquery_pkg['dpkg_version']
       action :install
     end
   end
 
-  def macos_install(osquery_pkg)
+  def macos_install
     # Install it!
     ld_label = 'com.facebook.osqueryd'
     cpe_remote_pkg 'osquery' do
-      app osquery_pkg['name']
-      version osquery_pkg['version']
-      checksum osquery_pkg['checksum']
+      app pkg_name
+      version pkg_version
+      checksum pkg_checksum
       receipt osquery_pkg['receipt']
       if ::File.exists?("/Library/LaunchDaemons/#{ld_label}.plist")
         notifies :restart, "launchd[#{ld_label}]", :immediately
@@ -86,27 +76,14 @@ action_class do # rubocop:disable Metrics/BlockLength
     end
   end
 
-  def windows_install(osquery_pkg)
-    version = osquery_pkg['version']
-    file_name = "#{osquery_pkg['name']}-"\
-      "#{version}.nupkg"
-    # Cache directory where we will stash the nupkg for osquery
-    pkg_dir = ::File.join(Chef::Config[:file_cache_path], 'osquery')
-    # Create the directory where the package will live.
-    directory pkg_dir
-    # Construct the file path to the nupkg so we can place it and install it.
-    pkg_path = ::File.join(pkg_dir, file_name)
-    cpe_remote_file osquery_pkg['name'] do
-      backup 1
-      file_name file_name
-      checksum osquery_pkg['checksum']
-      path pkg_path
-    end
-    # Install the nupkg
-    chocolatey_package 'osquery' do
-      source pkg_dir
-      options "--checksum #{osquery_pkg['checksum']} --params='/InstallService'"
-      action :upgrade
+  def windows_install
+    download_package
+
+    # Install the MSI
+    windows_package "Install #{pkg_name}" do
+      source pkg_filepath
+      options '/norestart /passive /qn'
+      checksum pkg_checksum
     end
   end
 
@@ -120,13 +97,6 @@ action_class do # rubocop:disable Metrics/BlockLength
     # prometheus_targets
     # views
     # decorators
-
-    osquery_dir = value_for_platform_family(
-      'windows' => 'C:\ProgramData\osquery',
-      'debian' => '/etc/osquery',
-      'mac_os_x' => '/var/osquery',
-      'default' => nil,
-    )
 
     # Make sure directory exists and permissions are correct
     directory osquery_dir do
@@ -212,7 +182,14 @@ action_class do # rubocop:disable Metrics/BlockLength
   def windows_manage_service
     service 'osqueryd' do
       action :start
+      not_if { osquery_service_status&.include?('Running') }
     end
+  end
+
+  def osquery_service_status
+    return nil unless node.windows?
+    status = powershell_out('(Get-Service osqueryd).status').stdout.to_s.chomp
+    status.empty? ? nil : status
   end
 
   def uninstall
@@ -237,8 +214,8 @@ action_class do # rubocop:disable Metrics/BlockLength
       /usr/share/osquery
       /var/osquery
       /var/log/osquery
-    ].each do |osquery_dir|
-      directory osquery_dir do
+    ].each do |osquery_directory|
+      directory osquery_directory do
         recursive true
         action :delete
       end
@@ -287,8 +264,96 @@ action_class do # rubocop:disable Metrics/BlockLength
   end
 
   def windows_uninstall
-    chocolatey_package 'osquery' do
+    # Only download if we need to uninstall
+    download_package if node['packages'].key?(pkg_name)
+
+    # Invoke MSI uninstall
+    windows_package "uninstall #{pkg_name}" do
+      source pkg_filepath
+      checksum pkg_checksum
       action :remove
+      options '/qn /norestart'
+      only_if { node['packages'].key?(pkg_name) && ::File.exists?(pkg_filepath) }
+    end
+    # Run custom script to force cleanup of remaining files
+    powershell_script 'uninstall osquery - force cleanup' do
+      code <<-PSCRIPT
+      $serviceName = 'osqueryd'
+      $serviceDescription = 'osquery daemon service'
+      $progFiles = [System.Environment]::GetEnvironmentVariable('ProgramFiles')
+      $targetFolder = Join-Path $progFiles 'osquery'
+      # Remove the osquery path from the System PATH variable. Note: Here
+      # we don't make use of our local vars, as Regex requires escaping the '\'
+      $oldPath = [System.Environment]::GetEnvironmentVariable('Path', 'Machine')
+      if ($oldPath -imatch [regex]::escape($targetFolder)) {
+        $newPath = $oldPath -replace [regex]::escape($targetFolder), $NULL
+        [System.Environment]::SetEnvironmentVariable('Path', $newPath, 'Machine')
+      }
+      if ((Get-Service $serviceName -ErrorAction SilentlyContinue)) {
+        Stop-Service $serviceName
+        # If we find zombie processes, ensure they're termintated
+        $proc = Get-Process | Where-Object { $_.ProcessName -eq 'osqueryd' }
+        if ($null -ne $proc) {
+          Stop-Process -Force $proc -ErrorAction SilentlyContinue
+        }
+        Set-Service $serviceName -startuptype 'manual'
+        Get-CimInstance -ClassName Win32_Service -Filter "Name='osqueryd'" | Invoke-CimMethod -methodName Delete
+      }
+      if (Test-Path $targetFolder) {
+        Remove-Item -Force -Recurse $targetFolder
+      } else {
+        Write-Debug 'osquery was not found on the system. Nothing to do.'
+      }
+      PSCRIPT
+      only_if { ::File.directory?(::File.join(ENV['ProgramFiles'], 'osquery')) }
+    end
+  end
+
+  def osquery_pkg
+    node['cpe_osquery']['pkg'].to_hash
+  end
+
+  def pkg_version
+    osquery_pkg['version']
+  end
+
+  def pkg_name
+    osquery_pkg['name']
+  end
+
+  def pkg_checksum
+    osquery_pkg['checksum']
+  end
+
+  def osquery_dir
+    value_for_platform_family(
+      'windows' => 'C:\Program Files\osquery',
+      'debian' => '/etc/osquery',
+      'mac_os_x' => '/var/osquery',
+      'default' => nil,
+    )
+  end
+
+  def pkg_filename
+    filetype = value_for_platform_family(
+      'windows' => 'msi',
+      'debian' => 'deb',
+      'mac_os_x' => 'pkg',
+      'default' => nil,
+    )
+    "#{pkg_name}-#{pkg_version}.#{filetype}"
+  end
+
+  def pkg_filepath
+    ::File.join(Chef::Config[:file_cache_path], pkg_filename)
+  end
+
+  def download_package
+    cpe_remote_file pkg_name do
+      backup 1
+      file_name pkg_filename
+      checksum pkg_checksum
+      path pkg_filepath
     end
   end
 end
