@@ -172,6 +172,7 @@ action_class do # rubocop:disable Metrics/BlockLength
         '--flagfile',
         flag_file,
       ]
+      environment_variables({ 'SYSTEM_VERSION_COMPAT' => '0' }) unless node.os_at_least_or_lower?('10.15.99')
       keep_alive true
       run_at_load true
       throttle_interval 60
