@@ -1,3 +1,5 @@
+# We will no longer be supporting/maintaining this cookbook; use at your own discretion
+
 cpe_crashplan Cookbook
 ========================
 Installs and manages components of crashplan
