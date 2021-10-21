@@ -3,4 +3,4 @@
 This repo will contain custom osquery plugins to help manage Uber's fleet at scale.
 
 We have the following custom extensions:
-- Crowdstrike Falcon Agent (macOS Only)
+- Crowdstrike Falcon Agent 6.18+ (macOS Only)
