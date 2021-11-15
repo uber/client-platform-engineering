@@ -4,12 +4,13 @@ import (
 	"flag"
 	"log"
 	"os"
-	"time"
 	"runtime"
+	"time"
 
-	"github.com/uber/client-platform-engineering/osq-exts/tables/crowdstrikefalconagent"
 	"github.com/osquery/osquery-go"
 	"github.com/osquery/osquery-go/plugin/table"
+	"github.com/uber/client-platform-engineering/osq-exts/tables/crowdstrikefalconagent"
+	"github.com/uber/client-platform-engineering/osq-exts/tables/ima"
 )
 
 const (
@@ -22,11 +23,20 @@ var (
 	socket   = flag.String("socket", "", "Path to the extensions UNIX domain socket")
 	timeout  = flag.Int("timeout", 3, "Seconds to wait for autoloaded extensions")
 	interval = flag.Int("interval", 3, "Seconds delay between connectivity checks")
+	verbose  = flag.Bool("verbose", false, "enable verbose messaging")
 )
 
 func listOfPlugins() (plugins []osquery.OsqueryPlugin) {
 	if crowdstrikefalconagent.Supported(runtime.GOOS) {
 		plugins = append(plugins, table.NewPlugin(crowdstrikefalconagent.Register()))
+	}
+
+	if imasubsys, err := ima.NewIMA(); err == nil {
+		plugins = append(plugins, table.NewPlugin(imasubsys.Register()))
+	}
+
+	if measurements, err := ima.NewMeasurements(); err == nil {
+		plugins = append(plugins, table.NewPlugin(measurements.Register()))
 	}
 
 	return
