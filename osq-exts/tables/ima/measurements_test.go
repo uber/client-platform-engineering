@@ -6,7 +6,7 @@ import (
 )
 
 func TestCreateNewMeasurements(t *testing.T) {
-	_, err := NewMesaurements()
+	_, err := NewMeasurements()
 
 	switch(runtime.GOOS) {
 	case "linux":
