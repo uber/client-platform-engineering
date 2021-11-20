@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"time"
-	"runtime"
 
 	"github.com/uber/client-platform-engineering/osq-exts/tables/crowdstrikefalconagent"
 	"github.com/osquery/osquery-go"
@@ -25,8 +24,8 @@ var (
 )
 
 func listOfPlugins() (plugins []osquery.OsqueryPlugin) {
-	if crowdstrikefalconagent.Supported(runtime.GOOS) {
-		plugins = append(plugins, table.NewPlugin(crowdstrikefalconagent.Register()))
+	if csfa, err := crowdstrikefalconagent.New(); err == nil {
+		plugins = append(plugins, table.NewPlugin(csfa.Register()))
 	}
 
 	return
