@@ -2,7 +2,9 @@ package crowdstrikefalconagent
 
 import (
 	"context"
+	"github.com/osquery/osquery-go/plugin/logger"
 	"github.com/osquery/osquery-go/plugin/table"
+	"log"
 )
 
 const (
@@ -27,4 +29,13 @@ func (csfa *CrowdStrikeFalconAgent) Register() (string, []table.ColumnDefinition
 
 func (csfa *CrowdStrikeFalconAgent) Generate(ctx context.Context, queryContext table.QueryContext) ([]map[string]string, error) {
 	return csfa.osGenerate(ctx, queryContext)
+}
+
+func (csfa *CrowdStrikeFalconAgent) Logger() (string, logger.LogFunc) {
+	return _PLUGIN_NAME, csfa.Log
+}
+
+func (csfa *CrowdStrikeFalconAgent) Log(ctx context.Context, typ logger.LogType, logText string) (err error) {
+	log.Printf("%s: %s\n", typ, logText)
+	return
 }

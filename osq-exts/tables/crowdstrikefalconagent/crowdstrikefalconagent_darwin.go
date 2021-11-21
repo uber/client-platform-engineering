@@ -109,7 +109,7 @@ func (c *CrowdStrikeFalconAgent) osColumns() []table.ColumnDefinition {
 		table.BigIntColumn(_ES_NOTIFY),
 		table.BigIntColumn(_SA_AVG),
 		table.BigIntColumn(_SA_MAX),
-		table.BigIntColumn(_SA_READY),
+		table.TextColumn(_SA_READY),
 		table.BigIntColumn(_SA_REQUESTS),
 		table.BigIntColumn(_SA_SUCCESSES),
 		table.BigIntColumn(_BW_FILTER_CALLED),
