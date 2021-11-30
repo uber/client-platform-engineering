@@ -74,7 +74,7 @@ type EndpointSecurity struct {
 }
 
 type StaticAnalysis struct {
-	AVG       int  `plist:"avg"`
+	Avg       int  `plist:"avg"`
 	Max       int  `plist:"max"`
 	Ready     bool `plist:"ready"`
 	Requests  int  `plist:"requests"`
@@ -163,7 +163,7 @@ func prepareResults(in *TopLevel) ([]map[string]string, error) {
 			_DC_RULECOUNT:          fmt.Sprintf("%v", in.DeviceControl.RuleCount),
 			_ES_AUTH:               fmt.Sprintf("%v", in.EndpointSecurity.Auth),
 			_ES_NOTIFY:             fmt.Sprintf("%v", in.EndpointSecurity.Notify),
-			_SA_AVG:                fmt.Sprintf("%v", in.StaticAnalysis.AVG),
+			_SA_AVG:                fmt.Sprintf("%v", in.StaticAnalysis.Avg),
 			_SA_MAX:                fmt.Sprintf("%v", in.StaticAnalysis.Max),
 			_SA_READY:              fmt.Sprintf("%v", in.StaticAnalysis.Ready),
 			_SA_REQUESTS:           fmt.Sprintf("%v", in.StaticAnalysis.Requests),

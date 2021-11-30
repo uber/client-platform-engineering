@@ -36,6 +36,7 @@ func (csfa *CrowdStrikeFalconAgent) Logger() (string, logger.LogFunc) {
 }
 
 func (csfa *CrowdStrikeFalconAgent) Log(ctx context.Context, typ logger.LogType, logText string) (err error) {
+	//TODO:  Figure out a better way to handle logging.
 	log.Printf("%s: %s\n", typ, logText)
 	return
 }
