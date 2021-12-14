@@ -4,12 +4,13 @@ import (
 	"flag"
 	"log"
 	"os"
+	"runtime"
 	"time"
-
 	"github.com/osquery/osquery-go"
 	"github.com/osquery/osquery-go/plugin/logger"
 	"github.com/osquery/osquery-go/plugin/table"
 	"github.com/uber/client-platform-engineering/osq-exts/tables/crowdstrikefalconagent"
+	"github.com/uber/client-platform-engineering/osq-exts/tables/ima"
 )
 
 const (
@@ -29,6 +30,14 @@ func listOfPlugins() (plugins []osquery.OsqueryPlugin) {
 	if csfa, err := crowdstrikefalconagent.New(); err == nil {
 		plugins = append(plugins, table.NewPlugin(csfa.Register()))
 		plugins = append(plugins, logger.NewPlugin(csfa.Logger()))
+	}
+
+	if imasubsys, err := ima.NewIMA(); err == nil {
+		plugins = append(plugins, table.NewPlugin(imasubsys.Register()))
+	}
+
+	if measurements, err := ima.NewMeasurements(); err == nil {
+		plugins = append(plugins, table.NewPlugin(measurements.Register()))
 	}
 
 	return
