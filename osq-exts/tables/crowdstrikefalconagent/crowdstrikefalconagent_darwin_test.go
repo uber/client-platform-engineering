@@ -32,7 +32,7 @@ const (
 	_SANITIZED_INPUT = "abcdefghih-0-1-2-3-4-5--6--78"
 )
 
-func TestCheckForCTLExistence(t *testing.T) {
+func TestDarwinCheckForCTLExistence(t *testing.T) {
 	// this just checks for the existence of a file
 	// so this could be anything, test for true/false.
 
@@ -49,7 +49,7 @@ func TestCheckForCTLExistence(t *testing.T) {
 	}
 }
 
-func TestCheckForCTLExistenceFailure(t *testing.T) {
+func TestDarwinCheckForCTLExistenceFailure(t *testing.T) {
 	// this test should error
 	err := checkFalconCtl(_PLIST_TEMP_NAME)
 	if err == nil {
@@ -57,7 +57,7 @@ func TestCheckForCTLExistenceFailure(t *testing.T) {
 	}
 }
 
-func TestParseRead(t *testing.T) {
+func TestDarwinParseRead(t *testing.T) {
 	// this checks to make sure it can decode
 	// a fake plist/xml list
 
@@ -75,7 +75,7 @@ func TestParseRead(t *testing.T) {
 	}
 }
 
-func TestPrepareResults(t *testing.T) {
+func TestDarwinPrepareResults(t *testing.T) {
 	// this checks to ensure
 	// adequate results are presented.
 
@@ -94,15 +94,16 @@ func TestPrepareResults(t *testing.T) {
 	}
 }
 
-func TestPrepareError(t *testing.T) {
+func TestDarwinPrepareError(t *testing.T) {
 	ret, _ := prepareError(_FAKE_REASON)
 	if ret[0][_SENOR_OPERATIONAL] != _FAKE_REASON {
 		t.Fatal("not expected value.")
 	}
 }
 
-func TestInfoColumns(t *testing.T) {
-	ret := Columns()
+func TestDarwinInfoColumns(t *testing.T) {
+	tst, _ := New()
+	ret := tst.Columns()
 
 	for _, v := range ret {
 		if v.Name == _AGENTID && v.Type == "TEXT" {
@@ -113,7 +114,7 @@ func TestInfoColumns(t *testing.T) {
 	t.Fatal("unable to find correct value.")
 }
 
-func TestFilterString(t *testing.T) {
+func TestDarwinFilterString(t *testing.T) {
 	ret := filterString(_BAD_INPUT)
 
 	if ret != _SANITIZED_INPUT {
@@ -121,12 +122,9 @@ func TestFilterString(t *testing.T) {
 	}
 }
 
-func TestSupported(t *testing.T) {
-	if ret := Supported(_DARWIN); ret != true {
-		t.Fatal("unexpected return value")
-	}
-
-	if ret := Supported("random"); ret != false {
-		t.Fatal("unexpected return value")
+func TestDarwinSupported(t *testing.T) {
+	_, err := New()
+	if err != nil {
+		t.Fatal("New() should not return nil")
 	}
 }

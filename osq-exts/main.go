@@ -6,8 +6,8 @@ import (
 	"os"
 	"runtime"
 	"time"
-
 	"github.com/osquery/osquery-go"
+	"github.com/osquery/osquery-go/plugin/logger"
 	"github.com/osquery/osquery-go/plugin/table"
 	"github.com/uber/client-platform-engineering/osq-exts/tables/crowdstrikefalconagent"
 	"github.com/uber/client-platform-engineering/osq-exts/tables/ima"
@@ -27,8 +27,9 @@ var (
 )
 
 func listOfPlugins() (plugins []osquery.OsqueryPlugin) {
-	if crowdstrikefalconagent.Supported(runtime.GOOS) {
-		plugins = append(plugins, table.NewPlugin(crowdstrikefalconagent.Register()))
+	if csfa, err := crowdstrikefalconagent.New(); err == nil {
+		plugins = append(plugins, table.NewPlugin(csfa.Register()))
+		plugins = append(plugins, logger.NewPlugin(csfa.Logger()))
 	}
 
 	if imasubsys, err := ima.NewIMA(); err == nil {
