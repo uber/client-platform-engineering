@@ -39,9 +39,9 @@ For example in your recipe you could do the following:
 ```
 # Install python framework first
 cpe_remote_pkg 'umad_python' do
-  version '3.8.0'
-  checksum 'ef52f595c6046f8ce75bd48d57af9d16972125b60318763c90712b8d9c8d51c5'
-  receipt 'com.org.pkg.umad.python'
+  version '3.9.5'
+  checksum '17e2f5cb361f7c30f7324d8b159086f4de5684afd676c41d81121b9b9ce2aab7'
+  receipt 'org.macadmins.python.recommended'
 end
 # Setup cpe_umad
 node.default['cpe_umad']'python_path'] = '/Library/ManagedFrameworks/Python/Python3.framework'

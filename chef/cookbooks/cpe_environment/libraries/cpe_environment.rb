@@ -5,11 +5,13 @@ module CPE
 
     def self.chef_managed?(config_path)
       return false unless ::File.exist?(config_path)
+
       read_config(config_path).include?(CHEF_MANAGED_TAG)
     end
 
     def self.zsh_chef_managed?(config_path, cpe_config_path)
       return false unless ::File.exist?(config_path)
+
       # Make sure the include lines exists somewhere in the file
       lines = read_config(config_path)
       return lines.each_cons(2).any? { |line1, line2| zsh_config_lines(cpe_config_path) == [line1, line2] }
@@ -17,6 +19,7 @@ module CPE
 
     def self.profile_chef_managed?(config_path, cpe_profiled_file)
       return false unless ::File.exist?(config_path)
+
       # Make sure the include lines exists somewhere in the file
       lines = read_config(config_path)
       return lines.each_cons(2).any? { |line1, line2| bash_config_lines(cpe_profiled_file) == [line1, line2] }
@@ -24,6 +27,7 @@ module CPE
 
     def self.read_config(config_path)
       return [] unless ::File.exist?(config_path)
+
       lines = ::File.readlines(config_path)
       return lines
     end

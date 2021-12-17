@@ -1,6 +1,6 @@
 <% unless @config['paths'].nil? || @config['paths'].empty? %>
 ENV_PATHS=<%= @config['paths'].join(':') %>
-   <% if node.macos? %>
+   <% if macos? %>
 if [[ -z "$PROMPT_COMMAND" ]]; then
    PROMPT_COMMAND='[[ "$PATH" =~ "$ENV_PATHS" ]] || export PATH="$ENV_PATHS:$PATH"'
 else

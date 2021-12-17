@@ -1,15 +1,16 @@
 #
-# Cookbook Name:: cpe_nudge
+# Cookbook:: cpe_nudge
 # Resources:: cpe_nudge_python_json
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 #
-# Copyright (c) 2019-present, Uber Technologies, Inc.
+# Copyright:: (c) 2019-present, Uber Technologies, Inc.
 # All rights reserved.
 #
 # This source code is licensed under the Apache 2.0 license found in the
 # LICENSE file in the root directory of this source tree.
 #
+unified_mode true
 
 resource_name :cpe_nudge_python_json
 provides :cpe_nudge_python_json, :os => 'darwin'
@@ -58,8 +59,8 @@ action_class do
     file json_path do
       mode '0644'
       owner root_owner
-      group root_group
-      content Chef::JSONCompat.to_json_pretty(json_prefs)
+      group node['root_group']
+      content Chef::JSONCompat.to_json_pretty(json_prefs.sort.to_h)
       notifies :disable, "launchd[#{launchagent_label}]", :immediately if ::File.exists?(launchagent_path)
     end
 

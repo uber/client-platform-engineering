@@ -1,15 +1,16 @@
 #
-# Cookbook Name:: cpe_nudge
+# Cookbook:: cpe_nudge
 # Resources:: cpe_nudge_python_install
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 #
-# Copyright (c) 2019-present, Uber Technologies, Inc.
+# Copyright:: (c) 2019-present, Uber Technologies, Inc.
 # All rights reserved.
 #
 # This source code is licensed under the Apache 2.0 license found in the
 # LICENSE file in the root directory of this source tree.
 #
+unified_mode true
 
 resource_name :cpe_nudge_python_install
 provides :cpe_nudge_python_install, :os => 'darwin'
@@ -59,7 +60,7 @@ action_class do # rubocop:disable Metrics/BlockLength
     ].each do |dir|
       directory dir do
         owner root_owner
-        group root_group
+        group node['root_group']
         mode '0755'
       end
     end
@@ -67,7 +68,7 @@ action_class do # rubocop:disable Metrics/BlockLength
     # Create Log folder with 777 permissions so user agent can write to it.
     directory ::File.join(base_path, 'Logs') do
       owner root_owner
-      group root_group
+      group node['root_group']
       mode '0777'
     end
 
@@ -90,7 +91,7 @@ action_class do # rubocop:disable Metrics/BlockLength
     nudge_files.each do |item|
       cookbook_file ::File.join(base_path, 'Resources', item) do
         owner root_owner
-        group root_group
+        group node['root_group']
         mode '0755'
         path ::File.join(base_path, 'Resources', item)
         source "nudge-python/resources/#{item}"
@@ -115,7 +116,7 @@ action_class do # rubocop:disable Metrics/BlockLength
     nudge_resource_files.each do |item|
       cookbook_file ::File.join(base_path, 'Resources', item) do
         owner root_owner
-        group root_group
+        group node['root_group']
         mode '0755'
         path ::File.join(base_path, 'Resources', item)
         source "nudge-python/#{source_path}/#{item}"
@@ -133,7 +134,7 @@ action_class do # rubocop:disable Metrics/BlockLength
     nudge_nib_files.each do |item|
       cookbook_file ::File.join(base_path, 'Resources', 'nudge.nib', item) do
         owner root_owner
-        group root_group
+        group node['root_group']
         mode '0755'
         path "/Library/nudge/Resources/nudge.nib/#{item}"
         source "nudge-python/resources/nudge.nib/#{item}"

@@ -1,5 +1,5 @@
 #
-# Cookbook Name:: cpe_environment
+# Cookbook:: cpe_environment
 # Attributes:: default
 #
 # Copyright:: (c) 2019-present, Uber Technologies, Inc.

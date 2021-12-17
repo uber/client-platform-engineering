@@ -1,15 +1,16 @@
 #
-# Cookbook Name:: cpe_umad
+# Cookbook:: cpe_umad
 # Resources:: cpe_umad_install
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 #
-# Copyright (c) 2019-present, Uber Technologies, Inc.
+# Copyright:: (c) 2019-present, Uber Technologies, Inc.
 # All rights reserved.
 #
 # This source code is licensed under the Apache 2.0 license found in the
 # LICENSE file in the root directory of this source tree.
 #
+unified_mode true
 
 resource_name :cpe_umad_install
 provides :cpe_umad_install, :os => 'darwin'
@@ -57,7 +58,7 @@ action_class do # rubocop:disable Metrics/BlockLength
     ].each do |dir|
       directory dir do
         owner root_owner
-        group root_group
+        group node['root_group']
         mode '0755'
         action :create
       end
@@ -66,7 +67,7 @@ action_class do # rubocop:disable Metrics/BlockLength
     # Create Log folder with 777 permissions so user agent can write to it.
     directory '/Library/umad/Logs' do
       owner root_owner
-      group root_group
+      group node['root_group']
       mode '0777'
       action :create
     end
@@ -104,7 +105,7 @@ action_class do # rubocop:disable Metrics/BlockLength
           template "/Library/umad/Resources/#{item}" do
             backup false
             owner root_owner
-            group root_group
+            group node['root_group']
             mode '0755'
             source item
             variables('shebang' => node['cpe_umad']['shebang'])
@@ -120,7 +121,7 @@ action_class do # rubocop:disable Metrics/BlockLength
           cookbook_file "/Library/umad/Resources/#{item}" do
             backup false
             owner root_owner
-            group root_group
+            group node['root_group']
             mode '0755'
             action :create
             path "/Library/umad/Resources/#{item}"
@@ -139,7 +140,7 @@ action_class do # rubocop:disable Metrics/BlockLength
       else
         cookbook_file "/Library/umad/Resources/#{item}" do
           owner root_owner
-          group root_group
+          group node['root_group']
           mode '0755'
           action :create
           path "/Library/umad/Resources/#{item}"
@@ -177,7 +178,7 @@ action_class do # rubocop:disable Metrics/BlockLength
     umad_resource_files.each do |item|
       cookbook_file "/Library/umad/Resources/#{item}" do
         owner root_owner
-        group root_group
+        group node['root_group']
         mode '0755'
         action :create
         path "/Library/umad/Resources/#{item}"
@@ -201,7 +202,7 @@ action_class do # rubocop:disable Metrics/BlockLength
     umad_nib_files.each do |item|
       cookbook_file "/Library/umad/Resources/umad.nib/#{item}" do
         owner root_owner
-        group root_group
+        group node['root_group']
         mode '0755'
         action :create
         path "/Library/umad/Resources/umad.nib/#{item}"

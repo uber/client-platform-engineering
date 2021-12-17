@@ -36,6 +36,7 @@ Attributes
 * node['cpe_gorilla']['install']
 * node['cpe_gorilla']['preferences']
 * node['cpe_gorilla']['task']
+* node['cpe_gorilla']['task']['create_task']
 * node['cpe_gorilla']['uninstall']
 * node['cpe_gorilla']['local_manifest']
 

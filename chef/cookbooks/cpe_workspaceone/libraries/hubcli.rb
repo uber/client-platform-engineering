@@ -1,10 +1,10 @@
 #
-# Cookbook Name:: cpe_workspaceone
+# Cookbook:: cpe_workspaceone
 # Library:: hubcli
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 #
-# Copyright (c) 2019-present, Uber Technologies, Inc.
+# Copyright:: (c) 2019-present, Uber Technologies, Inc.
 # All rights reserved.
 #
 # This source code is licensed under the Apache 2.0 license found in the
@@ -20,7 +20,7 @@ class Chef
     end
 
     def get_ws1_device_attributes
-      unless node.macos?
+      unless macos?
         Chef::Log.warn('node.ws1_device_attributes called on non-macOS!')
         return {}
       end
@@ -93,13 +93,13 @@ class Chef
 
     def _get_available_ws1_profiles_list
       attributes = {}
-      if node.macos?
+      if macos?
         cmd = hubcli_execute(
           'profiles --list --json',
         )
       end
       if cmd.exitstatus.zero?
-        if node.macos?
+        if macos?
           attributes = Chef::JSONCompat.parse(cmd.stdout.to_s)
         end
       else
@@ -110,7 +110,7 @@ class Chef
       return {} if attributes.empty?
 
       # add the OS version so we can do intelligent actions
-      if node.macos?
+      if macos?
         attributes['os_version'] = node['platform_version']
       end
 
@@ -118,7 +118,7 @@ class Chef
     end
 
     def _trigger_sync
-      if node.macos?
+      if macos?
         hubcli_execute('sync')
       end
     end

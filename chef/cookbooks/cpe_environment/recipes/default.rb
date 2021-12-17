@@ -1,5 +1,5 @@
 #
-# Cookbook Name:: cpe_environment
+# Cookbook:: cpe_environment
 # Recipe:: default
 #
 # Copyright:: (c) 2019-present, Uber Technologies, Inc.
@@ -11,7 +11,7 @@
 ## The method used on linux *may* cause issues with bash updates due to
 ## apt not wanting to overwrite the config. See ITECPEP-165
 ## Do not scope to linux until this is test/resolved
-return unless node.macos?
+return unless macos?
 
 cpe_environment_zsh 'Manage Global ZSH Environment'
 cpe_environment_bash 'Manage Global Bash Environment'

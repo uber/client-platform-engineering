@@ -1,10 +1,10 @@
 #
-# Cookbook Name:: uber_helpers
+# Cookbook:: uber_helpers
 # Libraries:: node_utils
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 #
-# Copyright (c) 2019-present, Uber Technologies, Inc.
+# Copyright:: (c) 2019-present, Uber Technologies, Inc.
 # All rights reserved.
 #
 # This source code is licensed under the Apache 2.0 license found in the
@@ -116,10 +116,15 @@ class Chef
     def _ws1_profile_version(display_name, profiles)
       fail 'profiles XML parsing cannot be nil!' if profiles.nil?
       fail 'profiles XML parsing must be a Hash!' unless profiles.is_a?(Hash)
+
       # WS1 will never have a V_0 profile
       profile_version = '0'
       if profiles.key?('_computerlevel')
         profiles['_computerlevel'].each do |profile|
+          if profile['ProfileDisplayName'].nil?
+            Chef::Log.warn("profile (#{profile['ProfileIdentifier']}) missing DisplayName key")
+            next
+          end
           profile_contents = profile['ProfileDisplayName'].split('/V_')
           return profile_contents[1] if profile_contents[0] == display_name
         end
@@ -130,10 +135,15 @@ class Chef
     def _ws1_user_profile_version(display_name, profiles)
       fail 'profiles XML parsing cannot be nil!' if profiles.nil?
       fail 'profiles XML parsing must be a Hash!' unless profiles.is_a?(Hash)
+
       # WS1 will never have a V_0 profile
       profile_version = '0'
       if profiles.key?(node.console_user)
         profiles[node.console_user].each do |profile|
+          if profile['ProfileDisplayName'].nil?
+            Chef::Log.warn("profile (#{profile['ProfileIdentifier']}) missing DisplayName key")
+            next
+          end
           profile_contents = profile['ProfileDisplayName'].split('/V_')
           return profile_contents[1] if profile_contents[0] == display_name
         end
@@ -150,7 +160,7 @@ class Chef
     end
 
     def bionic?
-      unless node.ubuntu?
+      unless ubuntu?
         Chef::Log.warn('node.bionic? called on non-ubuntu system')
         return
       end
@@ -158,7 +168,7 @@ class Chef
     end
 
     def catalina?
-      unless node.macos?
+      unless macos?
         Chef::Log.warn('node.catalina? called on non-OS X!')
         return
       end
@@ -166,19 +176,21 @@ class Chef
     end
 
     def big_sur?
-      unless node.macos?
+      unless macos?
         Chef::Log.warn('node.big_sur? called on non-macOS!')
         return
       end
-      return node.os_at_least?('11.0') || (node.os_at_least?('10.16') && node.os_less_than?('10.17'))
+      return node.os_at_least?('11.0') && node.os_less_than?('12.0') || \
+      (node.os_at_least?('10.16') && node.os_less_than?('10.17'))
     end
 
-    def console_user_debian
-      unless node.debian_family?
-        Chef::Log.warn('node.console_user_debian called on non-Debian!')
+    def monterey?
+      unless macos?
+        Chef::Log.warn('node.monterey? called on non-macOS!')
         return
       end
-      shell_out('/usr/bin/users').stdout.to_s.split(' ')[0]
+      return node.os_at_least?('12.0') && node.os_less_than?('13.0') || \
+      (node.os_at_least?('10.17') && node.os_less_than?('10.18'))
     end
 
     def date_at_least?(date)
@@ -194,7 +206,7 @@ class Chef
     end
 
     def el_capitan?
-      unless node.macos?
+      unless macos?
         Chef::Log.warn('node.el_capitan? called on non-OS X!')
         return
       end
@@ -223,7 +235,7 @@ class Chef
     end
 
     def high_sierra?
-      unless node.macos?
+      unless macos?
         Chef::Log.warn('node.high_sierra? called on non-OS X!')
         return
       end
@@ -231,7 +243,7 @@ class Chef
     end
 
     def kext_profile_contains_teamid?(kextid, profileid)
-      unless node.macos?
+      unless macos?
         Chef::Log.warn('node.kext_profile_contains_teamid called on non-macOS!')
       end
       node._parse_kext_profile(profileid, kextid, _config_profiles)
@@ -242,15 +254,31 @@ class Chef
     end
 
     def logged_in_user
-      unless node.ubuntu?
-        Chef::Log.warn('node.logged_in_user called on non-Ubuntu!')
+      unless debian?
+        Chef::Log.warn('node.logged_in_user called on non-Debian!')
         return
       end
       Etc.getlogin
     end
 
+    def logged_on_user_profile
+      unless windows?
+        Chef::Log.warn('node.logged_on_user_profile called on non-Windows!')
+        return
+      end
+      ps_cmd = <<~PSCRIPT
+        $userProfile = Get-WmiObject -Class "Win32_UserProfile" -Filter "Special = 'False' and LastUseTime != NULL" |
+        Sort-Object -Property LastUseTime | Select-Object -Last 1 | Select-Object -Property LocalPath, SID
+        $user = $userProfile.LocalPath.substring(9)
+        $hash = @{LastLoggedOnUser = "CORP\\$user"; LastLoggedOnUserSID = $userProfile.SID} | ConvertTo-Json
+        return $hash
+      PSCRIPT
+      cmd = node.powershell_out(ps_cmd).stdout.to_str.chomp!
+      Chef::JSONCompat.parse(cmd)
+    end
+
     def logged_on_user_registry
-      unless node.windows?
+      unless windows?
         Chef::Log.warn('node.logged_on_user_registry called on non-Windows!')
         return
       end
@@ -262,11 +290,13 @@ class Chef
       ) do |reg|
         reg.to_a.each_with_object({}).each { |(a, _, c), obj| obj[a] = c }
       end
-      u.select! { |k, _| k =~ /user/i }
+      return u.select! { |k, _| k =~ /user/i } unless node.vdi?
+
+      return logged_on_user_profile
     end
 
     def macos_application_version(apppath, key)
-      unless node.macos?
+      unless macos?
         Chef::Log.warn('node.macos_application_version called on non-OS X!')
         return ''
       end
@@ -282,7 +312,7 @@ class Chef
     end
 
     def macos_system_cert_installed?(cert_name)
-      unless node.macos?
+      unless macos?
         Chef::Log.warn('node.macos_cert_installed? called on non-OS X!')
         return false
       end
@@ -291,8 +321,18 @@ class Chef
       ).exitstatus.zero?
     end
 
+    def macos_system_cert_hash?(cert_name)
+      unless macos?
+        Chef::Log.warn('node.macos_cert_hash? called on non-OS X!')
+        return ''
+      end
+      shell_out(
+        "/usr/bin/security find-certificate -c \"#{cert_name}\" -Z /Library/Keychains/System.keychain",
+      ).run_command.stdout.to_s[/SHA-256 hash: (.*)/, 1]
+    end
+
     def macos_package_installed?(pkg_identifier, pkg_version)
-      unless node.macos?
+      unless macos?
         Chef::Log.warn('node.macos_package_installed? called on non-OS X!')
         false
       end
@@ -307,8 +347,24 @@ class Chef
       Gem::Version.new(installed_pkg_version) == Gem::Version.new(pkg_version)
     end
 
+    def macos_min_package_installed?(pkg_identifier, pkg_version)
+      unless macos?
+        Chef::Log.warn('node.macos_min_package_installed? called on non-OS X!')
+        false
+      end
+      installed_pkg_version = shell_out(
+        "/usr/sbin/pkgutil --pkg-info \"#{pkg_identifier}\"",
+      ).run_command.stdout.to_s[/version: (.*)/, 1]
+      # Compare the installed version to the maximum version
+      if installed_pkg_version.nil?
+        Chef::Log.warn("Package #{pkg_identifier} returned nil.")
+        false
+      end
+      Gem::Version.new(installed_pkg_version) >= Gem::Version.new(pkg_version)
+    end
+
     def macos_package_present?(pkg_identifier)
-      unless node.macos?
+      unless macos?
         Chef::Log.warn('node.macos_package_present? called on non-OS X!')
         return false
       end
@@ -323,7 +379,7 @@ class Chef
     end
 
     def mojave?
-      unless node.macos?
+      unless macos?
         Chef::Log.warn('node.mojave? called on non-OS X!')
         return
       end
@@ -339,7 +395,7 @@ class Chef
     end
 
     def profile_contains_content?(profile_content, profile_identifier)
-      unless node.macos?
+      unless macos?
         Chef::Log.warn('node.profile_contains_content called on non-macOS!')
         return
       end
@@ -348,7 +404,7 @@ class Chef
     end
 
     def profile_installed?(type, value, mdm = nil)
-      unless node.macos?
+      unless macos?
         Chef::Log.warn('node.profile_installed called on non-macOS!')
         return
       end
@@ -356,23 +412,15 @@ class Chef
     end
 
     def sierra?
-      unless node.macos?
+      unless macos?
         Chef::Log.warn('node.sierra? called on non-OS X!')
         return
       end
       return node.os_at_least?('10.12') && node.os_less_than?('10.13')
     end
 
-    def trusty?
-      unless node.ubuntu?
-        Chef::Log.warn('node.trusty? called on non-ubuntu system')
-        return
-      end
-      return node['platform_version'].eql?('14.04')
-    end
-
     def user_profile_installed?(type, value, mdm = nil)
-      unless node.macos?
+      unless macos?
         Chef::Log.warn('node.user_profile_installed called on non-macOS!')
         return
       end
@@ -380,7 +428,7 @@ class Chef
     end
 
     def win_min_package_installed?(pkg_identifier, min_pkg)
-      unless node.windows?
+      unless windows?
         false
       end
       installed_pkg_version = UberHelpers::WinUtils.win_pkg_ver(pkg_identifier)
@@ -390,7 +438,7 @@ class Chef
     end
 
     def win_max_package_installed?(pkg_identifier, max_pkg)
-      unless node.windows?
+      unless windows?
         Chef::Log.warn(
           'node.win_max_package_installed? called on non-windows! system',
         )
@@ -406,8 +454,8 @@ class Chef
     end
 
     def debian_min_package_installed?(pkg_identifier, pkg_version)
-      unless node.ubuntu?
-        Chef::Log.warn('node.debian_package_installed? called on non-ubuntu system!')
+      unless debian?
+        Chef::Log.warn('node.debian_package_installed? called on non-Debian system!')
         false
       end
       installed_pkg_version = shell_out(
@@ -428,17 +476,17 @@ class Chef
     end
 
     def ws1_min_profile_installed?(display_name, version)
-      unless node.macos?
+      unless macos?
         Chef::Log.warn('node.ws1_min_profile_installed called on non-macOS!')
         return
       end
       installed_version = _ws1_profile_version(display_name, _config_profiles)
       if installed_version == '0'
-        Chef::Log.warn('node.ws1_min_profile_installed did not find profile installed!')
+        Chef::Log.warn("node.ws1_min_profile_installed did not find profile (#{display_name}) installed!")
         return false
       end
       if installed_version.nil?
-        Chef::Log.warn('node.ws1_min_profile_installed profile compared does not have a version. '\
+        Chef::Log.warn("node.ws1_min_profile_installed profile (#{display_name}) compared does not have a version. "\
           'Is this actually a ws1 profile?')
         return false
       end
@@ -446,37 +494,39 @@ class Chef
     end
 
     def ws1_min_user_profile_installed?(display_name, version)
-      unless node.macos?
+      unless macos?
         Chef::Log.warn('node.ws1_user_min_profile_installed called on non-macOS!')
         return
       end
       installed_version = _ws1_user_profile_version(display_name, _user_config_profiles)
       if installed_version == '0'
-        Chef::Log.warn('node.ws1_min_user_profile_installed did not find profile installed!')
+        Chef::Log.warn("node.ws1_min_user_profile_installed did not find profile (#{display_name}) installed!")
         return false
       end
       if installed_version.nil?
-        Chef::Log.warn('node.ws1_min_user_profile_installed profile compared does not have a version. '\
-          'Is this actually a ws1 profile?')
+        Chef::Log.warn("node.ws1_min_user_profile_installed profile (#{display_name}) compared does not have a "\
+          'version. Is this actually a ws1 profile?')
         return false
       end
       Gem::Version.new(installed_version) >= Gem::Version.new(version)
     end
 
-    def xenial?
-      unless node.ubuntu?
-        Chef::Log.warn('node.xenial? called on non-ubuntu system')
-        return
-      end
-      return node['platform_version'].eql?('16.04')
-    end
-
     def yosemite?
-      unless node.macos?
+      unless macos?
         Chef::Log.warn('node.yosemite? called on non-OS X!')
         return
       end
       return node.os_at_least?('10.10') && node.os_less_than?('10.11')
+    end
+
+    def cros?
+      unless debian?
+        Chef::Log.warn('node.cros? called on non debian!')
+        return
+      end
+      return false unless ::File.exists?('/sys/devices/virtual/dmi/id/bios_vendor')
+
+      return ::File.foreach('/sys/devices/virtual/dmi/id/bios_vendor').grep(/crosvm/i).any?
     end
 
     def chef_version
@@ -503,9 +553,13 @@ class Chef
       at_least?(chef_version, '16.0.0')
     end
 
+    def at_least_chef17?
+      at_least?(chef_version, '17.0.0')
+    end
+
     def powershell_package_provider?(pkg_identifier)
       status = false
-      unless node.windows?
+      unless windows?
         Chef::Log.warn('node.powershell_package_provider? called on non-windows device!')
         return false
       end
@@ -517,12 +571,13 @@ class Chef
       else
         status = Chef::JSONCompat.parse(cmd).include?(pkg_identifier)
       end
+
       status
     end
 
     def powershell_module?(pkg_identifier)
       status = false
-      unless node.windows?
+      unless windows?
         Chef::Log.warn('node.powershell_module_installed? called on non-windows device!')
         return false
       end
@@ -535,11 +590,12 @@ class Chef
       else
         status = Chef::JSONCompat.parse(cmd)
       end
+
       status
     end
 
     def dell_hw?
-      unless node.windows?
+      unless windows?
         Chef::Log.warn('node.dell_hw? called on non-windows device!')
         return false
       end
@@ -554,36 +610,37 @@ class Chef
     end
 
     def connection_reachable?(destination)
-      unless node.macos? || node.windows? || node.ubuntu?
+      unless macos? || windows? || debian?
         Chef::Log.warn('node.connection_reachable? called on non-macOS/windows/ubuntu device!')
         return false
       end
       status = false
-      if node.macos?
+      if macos?
         cmd = shell_out("/sbin/ping #{destination} -c 1")
-      elsif node.ubuntu?
+      elsif debian?
         cmd = shell_out("/bin/ping #{destination} -c 2")
-      elsif node.windows?
+      elsif windows?
         powershell_cmd = "Test-Connection #{destination} -Count 1 -Quiet"
         cmd = powershell_out(powershell_cmd)
       end
       if cmd.stdout.nil? || cmd.stdout.empty?
         return status
-      elsif node.macos? || node.ubuntu?
+      elsif macos? || debian?
         # If connected, will return 0, timeout is 68.
         status = cmd.exitstatus.zero?
-      elsif node.windows?
+      elsif windows?
         # Powershell returns a string of True/False, which ruby can't natively handle, so we downcase everything and use
         # JSON library to convert it to a BOOL.
         status = Chef::JSONCompat.parse(cmd.stdout.chomp.downcase)
       end
+
       status
     end
 
     def macos_os_sub_version
       @macos_os_sub_version ||=
         begin
-          unless node.macos?
+          unless macos?
             Chef::Log.warn('node.macos_os_sub_version called on non-OS X!')
             return '0'
           end
@@ -663,7 +720,7 @@ class Chef
 
     def distinguished_name?(ou_identifier)
       status = false
-      unless node.windows? || node.macos?
+      unless windows? || macos?
         Chef::Log.warn('node.distinguished_name? called on non-windows or macos device!')
         return false
       end
@@ -673,7 +730,55 @@ class Chef
       else
         status = dn.include?(ou_identifier)
       end
+
       return status
+    end
+
+    def network_extension_enabled?(extension_identifier)
+      extension_enabled = false
+      unless node.at_least?(node.chef_version, '17.7.22')
+        Chef::Log.warn('node.network_extension_enabled? requires chef v17.7.22 and higher!')
+        return extension_enabled
+      end
+      unless macos?
+        Chef::Log.warn('node.network_extension_enabled? called on non-OS X!')
+        return extension_enabled
+      end
+      # Everything is in a key of "$objects"
+      network_extensions = CF::Preferences.get('$objects', 'com.apple.networkextension')
+      # Apple uses an array of dictionaries but also puts a string or strings before some of
+      # the dictionaries to denote what tool it's configuration is, rather than use something sane like <key>.
+      # This condition grabs the current index, substracts one and compares it to the previous item in the array.
+      # It checks to see if the previous entry was the requested bundle ID and also that the value returned is not a
+      # string as Apple also has multiple string entries over and over in the array, which is not the data we need.
+      network_extensions.each_with_index do |value, index|
+        if network_extensions[index - 1] == extension_identifier && !value.instance_of?(String)
+          return value['Enabled'] # "Enabled" key to understand if the content filter is currently running
+        end
+      end
+      return extension_enabled
+    end
+
+    def system_extension_installed?(extension_identifier)
+      # examples: com.crowdstrike.falcon.Agent.systemextension, com.cisco.anyconnect.macos.acsockext.systemextension
+      system_extension_installed = false
+      unless node.at_least?(node.chef_version, '17.7.22')
+        Chef::Log.warn('node.system_extension_installed? requires chef v17.7.22 and higher!')
+        return extension_enabled
+      end
+      unless macos?
+        Chef::Log.warn('node.system_extension_installed? called on non-OS X!')
+        return extension_enabled
+      end
+      CF::Preferences.get('extensions', '/Library/SystemExtensions/db.plist').each do |k, _v|
+        relative_file_path = k['stagedBundleURL']['relative']
+        unless relative_file_path.nil?
+          if relative_file_path.include?(extension_identifier)
+            system_extension_installed = ::File.exists?(relative_file_path.split('file://')[1])
+          end
+        end
+      end
+      return system_extension_installed
     end
 
     # Return the Version Number as a String.
@@ -690,9 +795,62 @@ class Chef
       installed_pkg_version
     end
 
+    def macos_install_compat_check(file)
+      if ::File.exists?(file)
+        return shell_out("/usr/sbin/installer -volinfo -pkg #{file} -plist").stdout.include?('MountPoint')
+      else
+        Chef::Log.warn("#{file} does not exist.")
+        return false
+      end
+    end
+
     def installed_pkg_major_version(pkg_identifier)
       version = installed_pkg_version(pkg_identifier)
       version.split('.')[0] unless version.nil?
+    end
+
+    def forget_pkg(receipt)
+      installed_pkg_version = installed_pkg_version(receipt)
+      if installed_pkg_version
+        shell_out("/usr/sbin/pkgutil --forget #{receipt}")
+      end
+    end
+
+    def forget_pkg_with_launchagent(receipt, launcha_path)
+      installed_pkg_version = installed_pkg_version(receipt)
+      if installed_pkg_version
+        shell_out("/usr/sbin/pkgutil --forget #{receipt}")
+        if ::File.exists?(launcha_path)
+          shell_out("/usr/bin/su -l #{node.console_user} -c "\
+            "'/bin/launchctl unload -w #{launcha_path}'", default_env: false) # rubocop:disable Style/HashSyntax
+        end
+      end
+    end
+
+    def forget_pkg_with_launchdaemon(receipt, launchd_path)
+      installed_pkg_version = installed_pkg_version(receipt)
+      if installed_pkg_version
+        shell_out("/usr/sbin/pkgutil --forget #{receipt}")
+        if ::File.exists?(launchd_path)
+          shell_out("/bin/launchctl unload -w #{launchd_path}", default_env: false) # rubocop:disable Style/HashSyntax
+        end
+      end
+    end
+
+    def chef_solo?
+      ChefConfig::Config.chef_server_url.include?('localhost')
+    end
+
+    def file_blocked?(target)
+      return unless windows?
+
+      ps = "(Get-Item #{target} -Stream \"Zone.Identifier\" -ErrorAction SilentlyContinue) -ne $null | ConvertTo-Json"
+      cmd = powershell_out(ps).stdout.to_s
+      return Chef::JSONCompat.parse(cmd)
+    end
+
+    def at_least_big_sur?
+      node.os_at_least?('11.0') || node.os_at_least?('10.16')
     end
   end
 end

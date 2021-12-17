@@ -1,15 +1,16 @@
 #
-# Cookbook Name:: cpe_gorilla
+# Cookbook:: cpe_gorilla
 # Resources:: cpe_gorilla_configure
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 #
-# Copyright (c) 2019-present, Uber Technologies, Inc.
+# Copyright:: (c) 2019-present, Uber Technologies, Inc.
 # All rights reserved.
 #
 # This source code is licensed under the Apache 2.0 license found in the
 # LICENSE file in the root directory of this source tree.
 #
+unified_mode true
 
 resource_name :cpe_gorilla_configure
 provides :cpe_gorilla_configure, :os => 'windows'
@@ -102,12 +103,32 @@ action_class do
     runline = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe ' \
       "-NoProfile -ExecutionPolicy Bypass \"#{gorilla_ps1}\""
 
+    # Fix issues where ps1 is blocked on Server 2016
+    powershell_script 'Unblock Gorilla PS1' do
+      code <<-PSSCRIPT
+      Unblock-File #{gorilla_ps1} -ErrorAction SilentlyContinue
+      PSSCRIPT
+      only_if { node.file_blocked?(gorilla_ps1) }
+    end
+
     # Create a scheduled task to run Gorilla
     windows_task node['cpe_gorilla']['exe']['name'] do
       command runline
       frequency :minute
       frequency_modifier node['cpe_gorilla']['task']['minutes_per_run']
       run_level :highest
+      only_if { node['cpe_gorilla']['task']['create_task'] }
+    end
+
+    windows_task "#{node['cpe_gorilla']['exe']['name']}-onlogon" do
+      command gorilla_exe
+      frequency :on_logon
+      run_level :highest
+      only_if { node['cpe_gorilla']['task']['create_task'] }
+    end
+
+    windows_path bin_dir do
+      action :add
     end
   end
 
@@ -119,6 +140,10 @@ action_class do
     end
 
     windows_task node['cpe_gorilla']['exe']['name'] do
+      action :delete
+    end
+
+    windows_task "#{node['cpe_gorilla']['exe']['name']}-onlogon" do
       action :delete
     end
   end

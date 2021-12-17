@@ -1,15 +1,16 @@
 #
-# Cookbook Name:: cpe_shims
+# Cookbook:: cpe_shims
 # Resources:: cpe_shims
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 #
-# Copyright (c) 2019-present, Uber Technologies, Inc.
+# Copyright:: (c) 2019-present, Uber Technologies, Inc.
 # All rights reserved.
 #
 # This source code is licensed under the Apache 2.0 license found in the
 # LICENSE file in the root directory of this source tree.
 #
+unified_mode true if node['chef_packages']['chef']['version'] >= '15.3.0'
 
 resource_name :cpe_shims
 provides :cpe_shims, :os => ['darwin', 'linux']
@@ -31,7 +32,7 @@ action_class do
   end
 
   def shim_unix_os?
-    node.debian_family? || node.macos?
+    debian? || macos?
   end
 
   def cleanup(items_to_manage, json_path)
@@ -63,7 +64,7 @@ action_class do
     file json_path do
       mode '0644'
       owner root_owner
-      group root_group
+      group node['root_group']
       action :create
       content Chef::JSONCompat.to_json_pretty(items_to_manage)
     end
@@ -71,11 +72,12 @@ action_class do
 
   def manage
     return unless node['cpe_shims']['manage']
+
     shims = node['cpe_shims']['shims'].to_hash
     return if shims.empty? || shims.nil?
 
     linux_manage(shims) if shim_unix_os?
-    windows_manage if node.windows?
+    windows_manage if windows?
 
     items_to_manage = []
     # Process all of the paths for the shims
@@ -94,7 +96,7 @@ action_class do
     shims.to_hash.values.each do |shim|
       template shim['path'] do
         action :create
-        group root_group
+        group node['root_group']
         mode '0755'
         owner root_owner
         source 'bash.erb'

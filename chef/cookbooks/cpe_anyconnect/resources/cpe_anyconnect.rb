@@ -1,15 +1,16 @@
 #
-# Cookbook Name:: cpe_anyconnect
+# Cookbook:: cpe_anyconnect
 # Resources:: cpe_anyconnect
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 #
-# Copyright (c) 2021-present, Uber Technologies, Inc.
+# Copyright:: (c) 2021-present, Uber Technologies, Inc.
 # All rights reserved.
 #
 # This source code is licensed under the Apache 2.0 license found in the
 # LICENSE file in the root directory of this source tree.
 #
+unified_mode true
 
 resource_name :cpe_anyconnect
 provides :cpe_anyconnect, :os => ['darwin', 'windows']
@@ -36,9 +37,9 @@ action_class do # rubocop:disable Metrics/BlockLength
   end
 
   def install
-    debian_install if node.debian_family?
-    macos_install if node.macos?
-    windows_install if node.windows?
+    debian_install if debian?
+    macos_install if macos?
+    windows_install if windows?
   end
 
   def debian_install
@@ -66,12 +67,32 @@ action_class do # rubocop:disable Metrics/BlockLength
       Chef::Log.warn('cpe_anyconnect - forcing downgrade to false')
       allow_downgrade = False
     end
+
+    launchd 'com.cisco.anyconnect.vpnagentd' do
+      only_if { ::File.exist?('/Library/LaunchDaemons/com.cisco.anyconnect.vpnagentd.plist') }
+      action :nothing
+      type 'daemon'
+    end
+
     execute "/usr/sbin/installer -applyChoiceChangesXML #{cc_xml_path} -pkg #{pkg_path(pkg)} -target /" do
       # functionally equivalent to allow_downgrade false on cpe_remote_pkg
       unless allow_downgrade
-        not_if { node.min_package_installed?(pkg['receipt'], pkg['version']) }
+        not_if do
+          installed_pkg_version = shell_out(
+            "/usr/sbin/pkgutil --pkg-info \"#{pkg['receipt']}\"",
+          ).run_command.stdout.to_s[/version: (.*)/, 1]
+          # Compare the installed version to the minimum version
+          if installed_pkg_version.nil?
+            Chef::Log.warn("Package #{pkg['receipt']} returned nil.")
+            false
+          end
+          Gem::Version.new(installed_pkg_version) >= Gem::Version.new(pkg['version'])
+        end
       end
+      not_if { anyconnect_vpn_connected? }
       notifies :create, 'file[trigger_gui]', :immediately
+      # if vpnagentd is disabled, cisco package will fail to install and tank chef runs
+      notifies :enable, 'launchd[com.cisco.anyconnect.vpnagentd]', :before
     end
 
     # We only want the UI to trigger upon the first install and upgrades.
@@ -89,12 +110,18 @@ action_class do # rubocop:disable Metrics/BlockLength
       type 'agent'
       action :nothing
     end
+
+    if node['cpe_anyconnect']['umbrella_diagnostic_link']
+      umbrella_diagnostic_link
+    end
   end
 
   def windows_install
     # Create the cache directories and stage necessary files
     create_anyconnect_cache
     sync_anyconnect_cache
+    # Add precheck / remediation before running through install.
+    windows_error_prevention
 
     # Download and Install all modules
     node['cpe_anyconnect']['modules'].each do |pkg|
@@ -110,19 +137,20 @@ action_class do # rubocop:disable Metrics/BlockLength
         source pkg_path(pkg)
         options install_args
         checksum pkg['checksum']
+        not_if { anyconnect_vpn_connected? }
         not_if do
           # Don't try to install if package and version are already installed
-          node['packages'].key?(pkg['display_name']) &&
-          node['packages'][pkg['display_name']]['version'].eql?(pkg['version'])
+          (node['packages'].key?(pkg['display_name']) &&
+          node['packages'][pkg['display_name']]['version'].eql?(pkg['version']))
         end
       end
     end
   end
 
   def manage
-    debian_manage if node.debian_family?
-    macos_manage if node.macos?
-    windows_manage if node.windows?
+    debian_manage if debian?
+    macos_manage if macos?
+    windows_manage if windows?
   end
 
   def debian_manage
@@ -141,13 +169,13 @@ action_class do # rubocop:disable Metrics/BlockLength
   end
 
   def windows_manage
-    if anyconnect_service_status.nil?
+    if windows_vpnagent_service_status.nil?
       if node['packages'].include?('Cisco AnyConnect Secure Mobility Client')
         Chef::Log.warn('Anyconnect is installed but [vpnagent] service has been removed')
       end
-    elsif anyconnect_service_status.include?('Running')
+    elsif windows_vpnagent_service_status.include?('Running')
       Chef::Log.info('Anyconnect service [vpnagent] is running')
-    elsif anyconnect_service_status.include?('Stopped')
+    elsif windows_vpnagent_service_status.include?('Stopped')
       Chef::Log.info('Anyconnect service [vpnagent] is stopped')
     end
 
@@ -169,9 +197,9 @@ action_class do # rubocop:disable Metrics/BlockLength
   end
 
   def uninstall
-    debian_uninstall if node.debian_family?
-    macos_uninstall if node.macos?
-    windows_uninstall if node.windows?
+    debian_uninstall if debian?
+    macos_uninstall if macos?
+    windows_uninstall if windows?
   end
 
   def debian_uninstall
@@ -215,6 +243,13 @@ action_class do # rubocop:disable Metrics/BlockLength
       end
     end
 
+    # Remove AppData Files
+    directory ::File.join(ENV['PROGRAMDATA'], 'Cisco/Cisco AnyConnect Secure Mobility Client') do
+      action :delete
+      recursive true
+      ignore_failure true
+    end
+
     # Remove Desktop Link
     remove_desktop_link
   end
@@ -234,7 +269,7 @@ action_class do # rubocop:disable Metrics/BlockLength
   def create_anyconnect_cache
     # Create cache path
     directory anyconnect_root_cache_path do
-      group root_group
+      group node['root_group']
       owner root_owner
       recursive true
       mode '0755'
@@ -244,7 +279,7 @@ action_class do # rubocop:disable Metrics/BlockLength
   def sync_anyconnect_cache
     # Sync the entire anyconnect folder to handle any files an admin would need
     remote_directory anyconnect_root_cache_path do
-      group root_group
+      group node['root_group']
       owner root_owner
       mode '0755'
       source 'anyconnect'
@@ -269,19 +304,90 @@ action_class do # rubocop:disable Metrics/BlockLength
     pkg['app_name'].nil? ? "#{app_name}-#{pkg['name']}-#{pkg['version']}.msi" : "#{app_name}-#{pkg['version']}.pkg"
   end
 
-  def anyconnect_service_status
-    return nil unless node.windows?
-    status = powershell_out('(Get-Service vpnagent).status').stdout.to_s.chomp
-    status.empty? ? nil : status
+  def bfe_service_group
+    # Required to find which svchost group the bfe service is assigned to.
+    # Either LocalServiceNoNetwork or LoclalServiceNoNetworkFirewall
+    return nil unless windows?
+
+    cmd = "(Get-WMIObject Win32_Service -Filter \"Name='BFE'\")"
+    group = powershell_out("(#{cmd}.PathName).split(' ')[2]").stdout.to_s.chomp
+    group.empty? ? nil : group
+  end
+
+  def bfe_registry
+    return nil unless windows?
+
+    # Grabs registry value of svchost group and adds BFE to the list
+    base = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Svchost'
+    cmd = "(Get-ItemProperty -Path 'registry::#{base}')"
+    values = powershell_out("#{cmd}.#{bfe_service_group}").stdout.to_s.chomp.split(' ')
+    values.push('BFE') unless values.include?('BFE')
+    return values unless values.nil? || values.empty?
+
+    'BFE'
+  end
+
+  def anyconnect_vpn_connected?
+    return false unless windows? || macos?
+
+    client =
+      if windows?
+        ::File.join(ENV['ProgramFiles(x86)'], 'Cisco/Cisco AnyConnect Secure Mobility Client/vpncli.exe')
+      elsif macos?
+        '/opt/cisco/anyconnect/bin/vpn'
+      end
+
+    return false unless ::File.exist?(client)
+
+    if windows?
+      exe = 'Cisco/Cisco AnyConnect Secure Mobility Client/vpncli.exe'
+      result = powershell_out("(& (Join-path -Path ${ENV:ProgramFiles(x86)} -ChildPath '#{exe}') state)").stdout.to_s
+    elsif macos?
+      result = `#{client} state`
+    end
+    result&.include?('state: Connected')
   end
 
   def desktop_link
-    ::File.join(ENV['PUBLIC'], 'Desktop', 'Cisco Anyconnect Secure Mobility Client.lnk')
+    # set default location if ENV['PUBLIC'] is not assigned
+    public = ENV['PUBLIC'] || 'C:/Users/Public'
+    ::File.join(public, 'Desktop', 'Cisco Anyconnect Secure Mobility Client.lnk')
   end
 
   def remove_desktop_link
     file desktop_link do
       action :delete
     end
+  end
+
+  def umbrella_diagnostic_link
+    umbrella_diagnostic_path = '/opt/cisco/anyconnect/bin/UmbrellaDiagnostic.app'
+    link node['cpe_anyconnect']['umbrella_diagnostic_link'] do
+      to umbrella_diagnostic_path
+      only_if { ::File.exist?(umbrella_diagnostic_path) }
+    end
+  end
+
+  def windows_error_prevention
+    # Resolves 1603 error when installing on Windows devices (known issue)
+    return if bfe_service_group.nil?
+
+    registry_key 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Svchost' do
+      values [{
+        'name' => bfe_service_group, 'type' => :multi_string, 'data' => bfe_registry
+      }]
+      action :create
+    end
+
+    windows_service 'BFE' do
+      action :start
+    end
+  end
+
+  def windows_vpnagent_service_status
+    return nil unless windows?
+
+    status = powershell_out('(Get-Service vpnagent).status').stdout.to_s.chomp
+    status.empty? ? nil : status
   end
 end

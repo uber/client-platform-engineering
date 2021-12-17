@@ -1,10 +1,10 @@
 #
-# Cookbook Name:: cpe_ssh
+# Cookbook:: cpe_ssh
 # Libraries:: cpe_ssh
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 #
-# Copyright (c) 2019-present, Uber Technologies, Inc.
+# Copyright:: (c) 2019-present, Uber Technologies, Inc.
 # All rights reserved.
 #
 # This source code is licensed under the Apache 2.0 license found in the
@@ -15,6 +15,8 @@ module CPE
   class SSH
     CHEF_MANAGED_TAG = '# Managed by Chef'
     OLD_CHEF_MANAGED_TAG = '# Chef Managed'
+    BEGIN_HOST_TAG = '## Managed by Chef - Begin Host Config ##'
+    END_HOST_TAG = '## Managed by Chef - End Host Config ##'
 
     def self.config_path
       '/etc/ssh/ssh_config'
