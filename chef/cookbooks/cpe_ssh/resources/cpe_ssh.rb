@@ -1,15 +1,16 @@
 #
-# Cookbook Name:: cpe_ssh
+# Cookbook:: cpe_ssh
 # Resources:: cpe_ssh
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 #
-# Copyright (c) 2019-present, Uber Technologies, Inc.
+# Copyright:: (c) 2019-present, Uber Technologies, Inc.
 # All rights reserved.
 #
 # This source code is licensed under the Apache 2.0 license found in the
 # LICENSE file in the root directory of this source tree.
 #
+unified_mode true
 
 resource_name :cpe_ssh
 provides :cpe_ssh, :os => ['darwin', 'linux']
@@ -21,7 +22,7 @@ action :manage do
   cleanup unless node['cpe_ssh']['manage']
 end
 
-action_class do
+action_class do # rubocop:disable Metrics/BlockLength
   def configure
     # Get info about ssh config, rejecting unset values
     cpe_ssh_config = node['cpe_ssh']['config'].to_h.reject do |_k, v|
@@ -38,14 +39,20 @@ action_class do
     # Read in /etc/ssh/ssh_config
     ssh_config = CPE::SSH.read_config
 
-    # If there is a valid config and the Include directive does not exist, add
-    # it to the list to be included
-    if ssh_config_set && !CPE::SSH.chef_managed_config?
-      ssh_config += CPE::SSH.ssh_config_lines
-    # If there is no longer a config set, make sure to remove include and
-    # delete the config on disk
+    # If there is a valid config
+    if ssh_config_set
+      # If the include directive does not exist, add it to the list to be included
+      unless CPE::SSH.chef_managed_config?
+        ssh_config += CPE::SSH.ssh_config_lines
+      end
+
+      update_ssh_config_hosts(ssh_config)
+
+    # If there is no longer a config set, make sure to remove include, ssh config
+    # hosts and delete the config on disk
     elsif !ssh_config_set
       remove_cpe_include(ssh_config)
+      remove_ssh_config_hosts(ssh_config)
       # Make sure to delete the file if we no longer have any configs set
       file CPE::SSH.cpe_config_path do
         action :delete
@@ -56,7 +63,7 @@ action_class do
     # Note, we only look at lines which contain the desired directives
     file CPE::SSH.config_path do
       owner root_owner
-      group root_group
+      group node['root_group']
       mode '0644'
       content ssh_config.join
     end
@@ -65,7 +72,7 @@ action_class do
       only_if { ssh_config_set }
       source 'ssh_config_cpe.erb'
       owner root_owner
-      group root_group
+      group node['root_group']
       mode '0644'
       variables(
         'config' => cpe_ssh_config,
@@ -75,7 +82,7 @@ action_class do
     template CPE::SSH.known_hosts_path do
       source 'known_hosts_cpe.erb'
       owner root_owner
-      group root_group
+      group node['root_group']
       mode '0644'
       variables(
         'config' => cpe_known_hosts,
@@ -90,7 +97,7 @@ action_class do
       remove_cpe_include(ssh_config)
       file CPE::SSH.config_path do
         owner root_owner
-        group root_group
+        group node['root_group']
         mode '0644'
         content ssh_config.join
       end
@@ -108,6 +115,28 @@ action_class do
     tag_index = ssh_config.index("#{CPE::SSH::CHEF_MANAGED_TAG}\n")
     if tag_index && tag_index >= 0
       ssh_config.slice!(tag_index..tag_index + 1)
+    end
+  end
+
+  def update_ssh_config_hosts(ssh_config)
+    unless node['cpe_ssh']['config']['ssh_config_host'].nil?
+      remove_ssh_config_hosts(ssh_config)
+      ssh_config.append("#{CPE::SSH::BEGIN_HOST_TAG}\n")
+      node['cpe_ssh']['config']['ssh_config_host'].each do |name, conf|
+        ssh_config.append("Host #{name}\n")
+        conf.each do |k, v|
+          ssh_config.append("   #{k} #{v}\n")
+        end
+      end
+      ssh_config.append("#{CPE::SSH::END_HOST_TAG}\n")
+    end
+  end
+
+  def remove_ssh_config_hosts(ssh_config)
+    begin_index = ssh_config.index("#{CPE::SSH::BEGIN_HOST_TAG}\n")
+    end_index = ssh_config.index("#{CPE::SSH::END_HOST_TAG}\n")
+    if begin_index && begin_index >= 0 && end_index && end_index >= 0 && end_index > begin_index
+      ssh_config.slice!(begin_index..end_index)
     end
   end
 end

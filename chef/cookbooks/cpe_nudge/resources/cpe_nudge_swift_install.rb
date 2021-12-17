@@ -1,15 +1,16 @@
 #
-# Cookbook Name:: cpe_nudge
+# Cookbook:: cpe_nudge
 # Resources:: cpe_nudge_swift_install
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 #
-# Copyright (c) 2021-present, Uber Technologies, Inc.
+# Copyright:: (c) 2021-present, Uber Technologies, Inc.
 # All rights reserved.
 #
 # This source code is licensed under the Apache 2.0 license found in the
 # LICENSE file in the root directory of this source tree.
 #
+unified_mode true
 
 resource_name :cpe_nudge_swift_install
 provides :cpe_nudge_swift_install, :os => 'darwin'
@@ -71,7 +72,7 @@ action_class do # rubocop:disable Metrics/BlockLength
     # Create nudge base folder
     directory base_path do
       owner root_owner
-      group root_group
+      group node['root_group']
       mode '0755'
     end
 
@@ -84,7 +85,7 @@ action_class do # rubocop:disable Metrics/BlockLength
     ].each do |item|
       cookbook_file ::File.join(base_path, item) do
         owner root_owner
-        group root_group
+        group node['root_group']
         mode '0755'
         source "nudge-swift/custom/#{item}"
         notifies :disable, "launchd[#{launchagent_label}]", :immediately if ::File.exists?(launchagent_path)

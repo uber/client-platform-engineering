@@ -1,15 +1,16 @@
 #
-# Cookbook Name:: cpe_chefctl
+# Cookbook:: cpe_chefctl
 # Resources:: cpe_chefctl
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 #
-# Copyright (c) 2019-present, Uber Technologies, Inc.
+# Copyright:: (c) 2019-present, Uber Technologies, Inc.
 # All rights reserved.
 #
 # This source code is licensed under the Apache 2.0 license found in the
 # LICENSE file in the root directory of this source tree.
 #
+unified_mode true
 
 resource_name :cpe_chefctl
 provides :cpe_chefctl, :os => ['darwin', 'linux', 'windows']
@@ -37,7 +38,7 @@ action_class do
     cookbook_file chefctl_path do
       source 'chefctl.rb'
       user root_owner
-      group root_group
+      group node['root_group']
       mode '0755'
     end
 
@@ -48,7 +49,7 @@ action_class do
       recursive true
     end
     # Only symlink chefctl on macOS and linux
-    unless node.windows?
+    unless windows?
       chefctl_symlink = ::File.join(
         node['cpe_chefctl']['config']['chefctl']['symlink'],
         'chefctl',
@@ -73,7 +74,7 @@ action_class do
     end
     chefctl_bat = 'chefctl.bat'
     template ::File.join('C:\opscode\chef\bin', chefctl_bat) do
-      only_if { node.windows? }
+      only_if { windows? }
       source "#{chefctl_bat}.erb"
     end
   end

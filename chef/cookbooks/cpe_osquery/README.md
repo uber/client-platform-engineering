@@ -14,15 +14,19 @@ Note: You *must* have Chocolatey installed on Windows before running this cookbo
 Attributes
 ----------
 * node['cpe_osquery']
-* node['cpe_osquery']['install']
-* node['cpe_osquery']['pkg']
-* node['cpe_osquery']['pkg']['name']
-* node['cpe_osquery']['pkg']['checksum']
-* node['cpe_osquery']['pkg']['version']
-* node['cpe_osquery']['pkg']['receipt']
-* node['cpe_osquery']['manage']
-* node['cpe_osquery']['options']
+* node['cpe_osquery']['conf']
 * node['cpe_osquery']['extensions']
+* node['cpe_osquery']['install']
+* node['cpe_osquery']['manage']
+* node['cpe_osquery']['manage_official_packs']
+* node['cpe_osquery']['official_packs_install_list']
+* node['cpe_osquery']['options']
+* node['cpe_osquery']['packs']
+* node['cpe_osquery']['pkg']
+* node['cpe_osquery']['pkg']['checksum']
+* node['cpe_osquery']['pkg']['name']
+* node['cpe_osquery']['pkg']['receipt']
+* node['cpe_osquery']['pkg']['version']
 * node['cpe_osquery']['uninstall']
 
 Usage
@@ -96,9 +100,9 @@ cpe_remote_file 'Install extension' do
   file_name ext_filename
   checksum my_ext_hash
   path ext_path
-  unless node.windows? # Windows automatically inherits from the parent
+  unless windows? # Windows automatically inherits from the parent
     owner root_owner
-    group root_group
+    group node['root_group']
     mode '0700'
   end
   notifies :restart, "service[#{service_name}]"
@@ -106,4 +110,49 @@ end
 node.default['cpe_osquery']['extensions'] = [
   ext_path,
 ]
+```
+
+If you would like to install query packs, configure something like the following. Please note that cpe_osquery installs the packs as JSON conf files, not yaml.
+```
+if macos?
+  {
+    'Example Query' => {
+      'description' => 'This is an example query for macOS only.',
+      'interval' => 86400,
+      'query' => 'SELECT * from apps;',
+    },
+  }.each do |k, v|
+    node.default['cpe_osquery']['packs']['example-pack']['queries'][k] = v
+  end
+end
+```
+
+If you do not need query packs or would also like to configure distributed queries, configure the `schedule` key in the `cpe_osquery['conf']` hash.
+```
+if macos?
+  {
+    'Example Distributed Query' => {
+      'description' => 'This is an example distributed query for macOS only.',
+      'interval' => 86400,
+      'query' => 'SELECT * from apps;',
+    },
+  }.each do |k, v|
+    node.default['cpe_osquery']['conf']['schedule'][k] = v
+  end
+end
+```
+
+If you want to manage the official packs that come loaded with the osquery package, you would configure something like the following. Please see the `official_pack_list` code function in the `cpe_osquery` resource for the list of names accepted by the cookbook.
+```
+node.default['cpe_osquery']['manage_official_packs'] = true
+node.default['cpe_osquery']['official_packs_install_list'] = [
+  'it-compliance',
+  'vuln-management',
+]
+```
+
+If you want to delete all official packs bundled with the osquery package, just manage the official packs and use the built-in empty array.
+
+```
+node.default['cpe_osquery']['manage_official_packs'] = true
 ```

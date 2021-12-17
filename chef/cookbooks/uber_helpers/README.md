@@ -32,33 +32,11 @@ Usage
   end
   ```
 
-* node.bionic?
-  Returns a boolean value stating whether ubuntu is running 18.04
-
-  ```
-  if node.bionic?
-    do_thing
-  else
-    do_other_thing
-  end
-  ```
-
 * node.catalina?
   Returns a boolean value stating whether macOS is running a version of 10.15
 
   ```
   if node.catalina?
-    do_thing
-  else
-    do_other_thing
-  end
-  ```
-
-* console_user_debian
-  Returns the first user from `/usr/bin/users` on debian machines
-
-  ```
-  if console_user_debian == 'someone'
     do_thing
   else
     do_other_thing
@@ -290,17 +268,6 @@ Usage
   end
   ```
 
-* node.trusty?
-  Returns a boolean value stating whether ubuntu is running 14.04
-
-  ```
-  if node.trusty?
-    do_thing
-  else
-    do_other_thing
-  end
-  ```
-
 * node.user_profile_installed?(payload_type, conditional_value, mdm_type)
   Returns a boolean value stating whether a specific macOS user profile is installed. Profile can be looked up several ways
 
@@ -375,7 +342,7 @@ Usage
   Returns a boolean value stating whether a specific Workspace One device profile is installed with the minimum required version.
 
   ```
-  if node.user_profile_installed?('Intelligent Hub Privacy Preferences', 1)
+  if node.ws1_min_profile_installed?('Intelligent Hub Privacy Preferences', 1)
     do_thing
   else
     do_other_thing
@@ -385,18 +352,7 @@ Usage
 * node.ws1_min_user_profile_installed?(profile_name, version)
   Returns a boolean value stating whether a specific Workspace One user profile is installed with the minimum required version.
   ```
-  if node.user_profile_installed?('Airwatch Verification Profile for Mac devices', 1)
-    do_thing
-  else
-    do_other_thing
-  end
-  ```
-
-* node.xenial?
-  Returns a boolean value stating whether ubuntu is running 16.04
-
-  ```
-  if node.xenial?
+  if node.ws1_min_user_profile_installed?('Airwatch Verification Profile for Mac devices', 1)
     do_thing
   else
     do_other_thing

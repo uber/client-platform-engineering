@@ -1,15 +1,16 @@
 #
-# Cookbook Name:: cpe_hostname
+# Cookbook:: cpe_hostname
 # Resources:: cpe_hostname
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 #
-# Copyright (c) 2019-present, Uber Technologies, Inc.
+# Copyright:: (c) 2019-present, Uber Technologies, Inc.
 # All rights reserved.
 #
 # This source code is licensed under the Apache 2.0 license found in the
 # LICENSE file in the root directory of this source tree.
 #
+unified_mode true
 
 resource_name :cpe_hostname
 provides :cpe_hostname, :os => 'darwin'
@@ -39,7 +40,7 @@ action_class do
       return
     end
 
-    if node.macos?
+    if macos?
       # Don't apply at loginwindow or SetupAssistant
       if %w(loginwindow _mbsetupuser).include?(node.console_user)
         Chef::Log.warn(
@@ -68,10 +69,10 @@ action_class do
           only_if { check_hostname_macos(type) != fixed_hostname }
         end
       end
-    elsif node.windows?
+    elsif windows?
       # TODO: write windows portion
       return
-    elsif node.ubuntu?
+    elsif debian?
       # TODO: write ubuntu portion
       return
     end

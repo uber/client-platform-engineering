@@ -1,15 +1,16 @@
 #
-# Cookbook Name:: cpe_sal
+# Cookbook:: cpe_sal
 # Resources:: cpe_sal
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 #
-# Copyright (c) 2019-present, Uber Technologies, Inc.
+# Copyright:: (c) 2019-present, Uber Technologies, Inc.
 # All rights reserved.
 #
 # This source code is licensed under the Apache 2.0 license found in the
 # LICENSE file in the root directory of this source tree.
 #
+unified_mode true
 
 resource_name :cpe_sal
 provides :cpe_sal, :os => ['darwin', 'windows']
@@ -26,10 +27,10 @@ end
 action_class do # rubocop:disable Metrics/BlockLength
   def create_sal_folder(dir)
     # Create Sal folder
-    if node.windows?
+    if windows?
       directory dir do
         action :create
-        group root_group
+        group node['root_group']
         owner root_owner
       end
     end
@@ -37,14 +38,15 @@ action_class do # rubocop:disable Metrics/BlockLength
 
   def install
     return unless node['cpe_sal']['install']
+
     # Get info about the sal_scripts pkg, rejecting unset values
     pkg_info = node['cpe_sal']['scripts_pkg'].compact
     if pkg_info.empty? || pkg_info.nil?
       Chef::Log.warn('scripts_pkg is not populated, skipping pkg install')
       return
     end
-    macos_install(pkg_info) if node.macos?
-    windows_install(pkg_info) if node.windows?
+    macos_install(pkg_info) if macos?
+    windows_install(pkg_info) if windows?
   end
 
   def macos_install(pkg_info)
@@ -82,14 +84,15 @@ action_class do # rubocop:disable Metrics/BlockLength
 
   def configure
     return unless node['cpe_sal']['configure']
+
     # Get info about sal config, rejecting unset values
     sal_prefs = node['cpe_sal']['config'].compact
     if sal_prefs.empty? || sal_prefs.nil?
       Chef::Log.warn('config is not populated, skipping configuration')
       return
     end
-    macos_configure(sal_prefs) if node.macos?
-    windows_configure(sal_prefs) if node.windows?
+    macos_configure(sal_prefs) if macos?
+    windows_configure(sal_prefs) if windows?
   end
 
   def macos_configure(sal_prefs)
@@ -125,6 +128,7 @@ action_class do # rubocop:disable Metrics/BlockLength
       # Profiles are dead on macOS Big sur and later, so use defaults write
       sal_prefs.each_key do |key|
         next if sal_prefs[key].nil?
+
         if node.at_least_chef14?
           macos_userdefaults "Configure Sal - #{key}" do
             domain '/Library/Preferences/com.github.salopensource.sal'
@@ -164,7 +168,7 @@ action_class do # rubocop:disable Metrics/BlockLength
     }
     file config_json do
       content Chef::JSONCompat.to_json_pretty(sal_json_prefs)
-      group root_group
+      group node['root_group']
       owner root_owner
     end
 
@@ -190,7 +194,8 @@ action_class do # rubocop:disable Metrics/BlockLength
 
   def manage_plugins
     return unless node['cpe_sal']['manage_plugins']
-    macos_plugins if node.macos?
+
+    macos_plugins if macos?
   end
 
   def macos_plugins
@@ -204,13 +209,13 @@ action_class do # rubocop:disable Metrics/BlockLength
 
     plugins.each do |name, script|
       directory "#{plugins_dir}/#{name}_chef" do
-        group root_group
+        group node['root_group']
         mode '0755'
         owner root_owner
       end
 
       cookbook_file "#{plugins_dir}/#{name}_chef/#{script}" do
-        group root_group
+        group node['root_group']
         mode '0750'
         owner root_owner
         source script
@@ -219,7 +224,7 @@ action_class do # rubocop:disable Metrics/BlockLength
   end
 
   def cleanup
-    macos_cleanup if node.macos?
+    macos_cleanup if macos?
   end
 
   def macos_cleanup

@@ -1,5 +1,5 @@
 #
-# Cookbook Name:: cpe_environment
+# Cookbook:: cpe_environment
 # Resource:: cpe_environment_zsh
 #
 # Copyright:: (c) 2019-present, Uber Technologies, Inc.
@@ -7,6 +7,7 @@
 # This source code is licensed under the Apache 2.0 license found in the
 # LICENSE file in the root directory of this source tree.
 #
+unified_mode true
 
 resource_name :cpe_environment_zsh
 provides :cpe_environment_zsh, :os => ['darwin', 'linux']
@@ -20,7 +21,7 @@ end
 
 action_class do
   def zsh_config_file
-    if node.macos?
+    if macos?
       '/etc/zshenv'
     else
       '/etc/zsh/zshenv'
@@ -67,21 +68,21 @@ action_class do
     # Manage our include lines in /etc/zshenv
     file zsh_config_file do
       owner root_owner
-      group root_group
+      group node['root_group']
       mode '0644'
       content zsh_config.join
     end
 
     directory cpe_zsh_dir do
       owner root_owner
-      group root_group
+      group node['root_group']
     end
 
     template cpe_config_file do
       only_if { zsh_config_set }
       source 'zsh_cpe.erb'
       owner root_owner
-      group root_group
+      group node['root_group']
       mode '0644'
       variables(
         'config' => cpe_zsh_config,
@@ -96,7 +97,7 @@ action_class do
       remove_zsh_source(zsh_config)
       file zsh_config_file do
         owner root_owner
-        group root_group
+        group node['root_group']
         mode '0644'
         content zsh_config.join
       end

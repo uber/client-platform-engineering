@@ -28,6 +28,7 @@ require 'mixlib/config'
 require 'mixlib/log'
 require 'mixlib/shellout'
 require 'rubygems'
+require 'rbconfig'
 
 # We use comments on end blocks to tell what that end statement is ending
 # for sanity sake. This rubocop rule doesn't like this style.
@@ -79,6 +80,8 @@ module Chefctl
     end
     @logger.loggers.each do |log|
       log.formatter = proc do |severity, datetime, progname, msg|
+        progname ||= program_name
+        msg = msg[:msg] if msg.is_a?(Hash)
         "[#{datetime}] #{severity} #{progname}: #{msg}\n"
       end
       log.progname = program_name
@@ -123,7 +126,7 @@ module Chefctl
     extend Mixlib::Config
 
     # Allow the chef run to provide colored output.
-    color false
+    color true
 
     # Whether or not chefctl should provide verbose output.
     verbose false
@@ -135,6 +138,8 @@ module Chefctl
 
     # Whether or not chef-client should provide debug output.
     debug false
+
+    trace false
 
     # Default options to pass to chef-client.
     chef_options ['--no-fork']
@@ -179,6 +184,8 @@ module Chefctl
     # The default PATH environment variable to use for chef-client.
     # Should be unset for Windows if `windows_subshell` is set to false
     path %w{
+      /bin
+      /sbin
       /usr/sbin
       /usr/bin
     }
@@ -197,6 +204,7 @@ module Chefctl
       HOME
       SUDO_USER
       XAR_MOUNT_SEED
+      CHEF_LICENSE
     }
 
     # TODO(yottatsa): this option is deprecated
@@ -323,18 +331,22 @@ module Chefctl
 
     # Loads the plugin from a file
     def self.load_file(filename)
-      filename = File.expand_path(filename)
-      if File.exists? filename
-        Chefctl.logger.debug("Loading plugin at #{filename}.")
-        begin
-          require_relative filename
-        rescue LoadError => e
-          Chefctl.logger.debug("While loading #{filename} got error: #{e}")
-          Chefctl.logger.warn("Failed to load plugin #{filename}. Failing!")
-          raise
+      if filename
+        filename = File.expand_path(filename)
+        if File.exist? filename
+          Chefctl.logger.debug("Loading plugin at #{filename}.")
+          begin
+            require_relative filename
+          rescue LoadError => e
+            Chefctl.logger.debug("While loading #{filename} got error: #{e}")
+            Chefctl.logger.warn("Failed to load plugin #{filename}. Failing!")
+            raise
+          end
+        else
+          Chefctl.logger.info("Plugin file not found at #{filename}. Ignoring.")
         end
       else
-        Chefctl.logger.info("Plugin file not found at #{filename}. Ignoring.")
+        Chefctl.logger.info('Plugin file not defined. Ignoring.')
       end
     end
   end # class Plugin
@@ -357,7 +369,7 @@ module Chefctl
     def stop_or_wait_for_chef(logfile = false)
       # check to see whether or not chef is running
       return if chefctl_procs.empty?
-      return if logfile && !File.exists?(logfile)
+      return if logfile && !File.exist?(logfile)
 
       client_name = File.basename(chef_client_binary)
 
@@ -417,7 +429,7 @@ module Chefctl
     def load_config(config_file, cli_options = {})
       validate_options(cli_options)
       filename = File.expand_path(config_file)
-      if File.exists?(filename)
+      if File.exist?(filename)
         Chefctl::Config.from_file(filename)
       end
       Chefctl::Config.merge!(cli_options)
@@ -491,7 +503,7 @@ module Chefctl
           procs.select! { |p| command =~ p[:command] }
         end
 
-        # don't want stuff in the exclude
+        # don't want stuff to exclude
         exclude.each do |b|
           procs.reject! { |p| b =~ p[:command] }
         end
@@ -506,7 +518,7 @@ module Chefctl
         # We do this so chefctl runs on hosts don't see chefctl runs in that
         # host's containers.
         nsid_f = "/proc/#{Process.pid}/ns/pid"
-        if File.exists?(nsid_f) && check_nsid
+        if File.exist?(nsid_f) && check_nsid
           pid_ns = File.readlink(nsid_f)
           r = /pid:\[(\d*)\]/.match(pid_ns)
           if r
@@ -546,6 +558,8 @@ module Chefctl
             # Don't kill any ssh processes, but we might kill their children
             # separately. It'll get cleaned up if the child gets killed anyway.
             /ssh/,
+            # Facebook-ism, ignore
+            /sush/,
           ],
         )
 
@@ -734,15 +748,27 @@ module Chefctl
       # open the lockfile
       # we leave it open if we can acquire the lock,
       # otherwise we close it before we exit this function
-      @lock[:fd] = File.open(@lock[:file], 'a+')
-
       endtime = Time.now + timeout
+      open_for_writing = false
       loop do
-        acquired = @lock[:fd].flock(File::LOCK_EX | File::LOCK_NB)
-        return true if acquired
+        unless open_for_writing
+          begin
+            @lock[:fd] = File.open(@lock[:file], 'a+')
+            open_for_writing = true
+          rescue Errno::EACCES
+            # Windows will throw EACCES if the lock file is currently open in
+            # another process.
+            open_for_writing = false
+          end
+        end
+
+        if open_for_writing
+          acquired = @lock[:fd].flock(File::LOCK_EX | File::LOCK_NB)
+          return true if acquired
+        end
 
         if Time.now >= endtime
-          @lock[:fd].close
+          @lock[:fd].close if open_for_writing
           return false
         else
           sleep 2
@@ -754,7 +780,7 @@ module Chefctl
     # already
     def keep_testing
       stamp_file = Chefctl::Config.testing_timestamp
-      return unless File.exists?(stamp_file)
+      return unless File.exist?(stamp_file)
       now = Time.now
       new_time = now + 3600
       if File.mtime(stamp_file) - now < 3600
@@ -773,9 +799,11 @@ module Chefctl
       Chefctl.logger.debug("Trying lock #{@lock[:file]}")
       acquired = wait_for_lock(-1)
       unless acquired
-        held = nil
-        File.open(@lock[:file], 'r') do |f|
-          held = f.read.strip
+        held = 'another process'
+        unless Chefctl.lib.is_a?(Chefctl::Lib::Windows)
+          File.open(@lock[:file], 'r') do |f|
+            held = f.read.strip
+          end
         end
         Chefctl.logger.info("#{@lock[:file]} is locked by #{held}, " +
                             "waiting up to #{@lock[:time]} seconds.")
@@ -807,7 +835,7 @@ module Chefctl
         # handles. /me glares silently in the direction of Redmond...
         @lock[:fd].close
 
-        File.unlink(@lock[:file]) if File.exists?(@lock[:file]) && @lock[:held]
+        File.unlink(@lock[:file]) if File.exist?(@lock[:file]) && @lock[:held]
         @lock[:fd] = nil
       end
     end
@@ -872,6 +900,11 @@ module Chefctl
 
       t = rand(Chefctl::Config.splay)
       Chefctl.logger.info("splay: sleeping for #{t} seconds.")
+      begin
+        Chefctl.log_file.fsync
+      rescue NotImplementedError
+        Chefctl.logger.warn('No fsync support, splay message was delayed')
+      end
 
       # Ruby doesn't respond to SIGTERM inside a sleep call.
       # So we sleep in one second intervals. This way if something sends us
@@ -917,7 +950,12 @@ module Chefctl
       chef_args = []
 
       # Special command-line arguments
-      chef_args += %w{-l debug} if Chefctl::Config.debug
+      if Chefctl::Config.trace
+        chef_args += %w{-l trace}
+      elsif Chefctl::Config.debug
+        chef_args += %w{-l debug}
+      end
+
       if Chefctl::Config.human || Chefctl::Config.whyrun
         chef_args += %w{-l fatal -F doc}
       else
@@ -1067,7 +1105,7 @@ module Chefctl
     # Saves the output from the very first chef run indefinitely so we have
     # information about how the machine was originally setup.
     def save_firstrun
-      unless File.exists?(@paths[:first])
+      unless File.exist?(@paths[:first])
         # It's a first-run if the current log is the oldest in the directory.
         # This is a heuristic; in first run, there may be additional chef timer
         # runs queued up, which means we have initial logs from chefctl.rb. So
@@ -1075,7 +1113,7 @@ module Chefctl
         #
         # The glob here depends on our log date formatting above in
         # Chefctl::Lib.get_timestamp
-        oldest_log = Dir.glob(File.join(@paths[:logdir], 'chef.2*')).sort[0]
+        oldest_log = Dir.glob(File.join(@paths[:logdir], 'chef.2*')).min
         if @paths[:out] == oldest_log
           Chefctl.logger.debug("Copying first-run log to #{@paths[:first]}")
           # Copy, don't symlink so it's not deleted later as more chef runs
@@ -1232,6 +1270,22 @@ if $PROGRAM_NAME == __FILE__
     end
 
     parser.on(
+      '-t', '--trace',
+      'Enable chef trace logging. This is a shortcut to passing' +
+      '" -- -l trace" directly. This supersedes --debug'
+    ) do
+      Chefctl.logger.level = :trace
+      options[:trace] = true
+    end
+
+    parser.on(
+      '-w', '--wait-for-chef',
+      'Simply run the stop-or-wait-for-chef step, do not actually run Chef'
+    ) do
+      options[:wait_for_chef] = true
+    end
+
+    parser.on(
       '--program PROGRAM',
       "name of the chefctl process. defaults to '#{$PROGRAM_NAME}'",
     ) do |v|
@@ -1256,10 +1310,15 @@ if $PROGRAM_NAME == __FILE__
     quit "Log directory #{logdir} is a file."
   end
   FileUtils.mkdir_p(logdir, :mode => 0o775) unless
-      File.exists?(logdir)
+      File.exist?(logdir)
   FileUtils.touch(logfile)
   Chefctl.init_logger(logfile)
   Chefctl.logger.level = :debug if Chefctl::Config.verbose
+
+  if options[:wait_for_chef]
+    Chefctl.lib.stop_or_wait_for_chef
+    exit
+  end
 
   Chefctl::Plugin.get_plugin.pre_start
 

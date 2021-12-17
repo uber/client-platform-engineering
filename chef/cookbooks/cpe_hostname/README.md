@@ -19,7 +19,7 @@ Usage
 A config for setting the hostname to username-serial:
 
     node.default['cpe_hostname']['enforce'] = true
-    if node.macos?
+    if macos?
       node.default['cpe_hostname']['hostname'] =
         "#{node.console_user}-#{node.serial}"
     end

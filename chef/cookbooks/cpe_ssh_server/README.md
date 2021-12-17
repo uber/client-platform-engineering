@@ -16,10 +16,10 @@ By default, this cookbook will not manage ssh server in any capacity. You may en
 
 An example config would be:
 ```
-    # Enforcing SSH (On)
+    # Enforcing SSH On
     node.default['cpe_ssh_server']['manage'] = true
     node.default['cpe_ssh_server']['enable'] = true
 
-    # Enforcing SSH (Off)
+    # Enforcing SSH Off
     node.default['cpe_ssh_server']['manage'] = true
 ```

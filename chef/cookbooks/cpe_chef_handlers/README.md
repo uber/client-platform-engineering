@@ -30,7 +30,7 @@ end
   cookbook_file handler_path do
     source chef_handler
     user root_owner
-    group root_group
+    group node['root_group']
     mode '0644'
   end
 end

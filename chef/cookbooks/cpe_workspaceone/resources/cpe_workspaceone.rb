@@ -1,15 +1,16 @@
 #
-# Cookbook Name:: cpe_workspaceone
+# Cookbook:: cpe_workspaceone
 # Resources:: cpe_workspaceone
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 #
-# Copyright (c) 2019-present, Uber Technologies, Inc.
+# Copyright:: (c) 2019-present, Uber Technologies, Inc.
 # All rights reserved.
 #
 # This source code is licensed under the Apache 2.0 license found in the
 # LICENSE file in the root directory of this source tree.
 #
+unified_mode true
 
 resource_name :cpe_workspaceone
 provides :cpe_workspaceone, :os => 'darwin'
@@ -56,7 +57,7 @@ action_class do # rubocop:disable Metrics/BlockLength
   def enforce_mdm_profiles
     return unless node['cpe_workspaceone']['mdm_profiles']['enforce']
 
-    macos_enforce_mdm_profiles if node.macos?
+    macos_enforce_mdm_profiles if macos?
   end
 
   def set_cli_config(flag, val)
@@ -156,7 +157,7 @@ action_class do # rubocop:disable Metrics/BlockLength
   def install
     return unless node['cpe_workspaceone']['install']
 
-    macos_install if node.macos?
+    macos_install if macos?
   end
 
   def macos_install
@@ -186,7 +187,7 @@ action_class do # rubocop:disable Metrics/BlockLength
   def manage
     return unless node['cpe_workspaceone']['manage']
 
-    macos_manage if node.macos?
+    macos_manage if macos?
   end
 
   def macos_manage
@@ -194,6 +195,7 @@ action_class do # rubocop:disable Metrics/BlockLength
     unless ws1agent_prefs.empty?
       ws1agent_prefs.each_key do |key|
         next if ws1agent_prefs[key].nil?
+
         # WS1 agent doesn't use profiles atm. Chef 14+
         if node.at_least_chef14?
           macos_userdefaults "Configure com.vmware.hub.agent - #{key}" do
@@ -209,7 +211,7 @@ action_class do # rubocop:disable Metrics/BlockLength
   def uninstall
     return unless node['cpe_workspaceone']['uninstall']
 
-    macos_uninstall if node.macos?
+    macos_uninstall if macos?
   end
 
   def macos_uninstall

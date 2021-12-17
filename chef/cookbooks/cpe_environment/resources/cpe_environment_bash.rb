@@ -1,5 +1,5 @@
 #
-# Cookbook Name:: cpe_environment
+# Cookbook:: cpe_environment
 # Resource:: cpe_environment_bash
 #
 # Copyright:: (c) 2019-present, Uber Technologies, Inc.
@@ -7,6 +7,7 @@
 # This source code is licensed under the Apache 2.0 license found in the
 # LICENSE file in the root directory of this source tree.
 #
+unified_mode true
 
 resource_name :cpe_environment_bash
 provides :cpe_environment_bash, :os => ['darwin', 'linux']
@@ -20,7 +21,7 @@ end
 
 action_class do # rubocop:disable Metrics/BlockLength
   def bash_config_file
-    if node.macos?
+    if macos?
       '/etc/profile'
     else
       '/etc/bash.bashrc'
@@ -37,7 +38,7 @@ action_class do # rubocop:disable Metrics/BlockLength
 
   def configure
     # Catalina and higher don't even read /etc/profile, so lets skip this
-    return if node.macos? && node.os_at_least?('10.15')
+    return if macos? && node.os_at_least?('10.15')
 
     # Check config to make sure its not empty
     cpe_bash_config = node['cpe_environment']['config'].to_h.reject do |_k, v|
@@ -60,7 +61,7 @@ action_class do # rubocop:disable Metrics/BlockLength
     cookbook_file cpe_profiled_file do
       source 'profile_cpe'
       owner root_owner
-      group root_group
+      group node['root_group']
       mode '0644'
     end
 
@@ -80,7 +81,7 @@ action_class do # rubocop:disable Metrics/BlockLength
     # Manage our include lines in /etc/profile
     file bash_config_file do
       owner root_owner
-      group root_group
+      group node['root_group']
       mode '0644'
       content bash_config.join
     end
@@ -88,7 +89,7 @@ action_class do # rubocop:disable Metrics/BlockLength
     # /etc/profile.d doesn't exist on macOS by default
     directory '/etc/profile.d' do
       owner root_owner
-      group root_group
+      group node['root_group']
     end
 
     # Place our actual config into /etc/profile.d/cpe.sh
@@ -96,7 +97,7 @@ action_class do # rubocop:disable Metrics/BlockLength
       only_if { bash_config_set }
       source 'bash_cpe.erb'
       owner root_owner
-      group root_group
+      group node['root_group']
       mode '0644'
       variables(
         'config' => cpe_bash_config,
@@ -111,7 +112,7 @@ action_class do # rubocop:disable Metrics/BlockLength
       remove_bash_source(bash_config)
       file bash_config_file do
         owner root_owner
-        group root_group
+        group node['root_group']
         mode '0644'
         content bash_config.join
       end

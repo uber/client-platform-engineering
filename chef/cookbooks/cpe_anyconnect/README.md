@@ -1,6 +1,6 @@
 cpe_anyconnect Cookbook
 ========================
-Installs anyconnect with ChoiceChanges.xml and installs all necessary files for anyconnect to properly configure itself during install.
+Installs Cisco AnyConnect Client with `ChoiceChanges.xml` and installs all necessary files for AnyConnect to properly configure itself during install.
 
 For information on how to create the ChoiceChanges.xml file please see [the munki documentation](https://github.com/munki/munki/wiki/ChoiceChangesXML)
 
@@ -8,12 +8,11 @@ For more information on the AnyConnect ChoiceChanges see [this blog post](https:
 
 For information about installing the AnyConnect client see [AnyConnect Deployment Overview](https://www.cisco.com/c/en/us/td/docs/security/vpn_client/anyconnect/anyconnect40/administration/guide/b_AnyConnect_Administrator_Guide_4-0/deploy-anyconnect.html#ID-1425-000002d6)
 
-This cookbook depends on the following cookbooks
+This cookbook depends on the following cookbook:
 
 * cpe_remote
-* cpe_utils
 
-These cookbooks are offered by Facebook in the [IT-CPE](https://github.com/facebook/IT-CPE) repository.
+This cookbook is offered by Facebook in the [IT-CPE](https://github.com/facebook/IT-CPE) repository.
 
 Attributes
 ----------
@@ -36,6 +35,7 @@ Attributes
 * node['cpe_anyconnect']['modules']['install_args']
 * node['cpe_anyconnect']['desktop_shortcut']
 * node['cpe_anyconnect']['uninstall']
+* node['cpe_anyconnect']['umbrella_diagnostic_link']
 
 A base install config might look like this
 ```

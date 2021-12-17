@@ -1,15 +1,16 @@
 #
-# Cookbook Name:: cpe_apple_caching
+# Cookbook:: cpe_apple_caching
 # Resources:: cpe_apple_caching
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 #
-# Copyright (c) 2019-present, Uber Technologies, Inc.
+# Copyright:: (c) 2019-present, Uber Technologies, Inc.
 # All rights reserved.
 #
 # This source code is licensed under the Apache 2.0 license found in the
 # LICENSE file in the root directory of this source tree.
 #
+unified_mode true
 
 resource_name :cpe_apple_caching
 provides :cpe_apple_caching, :os => 'darwin'
@@ -24,6 +25,7 @@ end
 action_class do
   def configure
     return unless node['cpe_apple_caching']['configure']
+
     # Get info about caching config, rejecting unset values
     caching_prefs = node['cpe_apple_caching']['prefs'].compact
     if caching_prefs.empty? || caching_prefs.nil?
@@ -65,6 +67,7 @@ action_class do
 
   def force_disable
     return unless node['cpe_apple_caching']['force_disable']
+
     execute 'Force disabling Apple Content Caching' do
       command '/usr/bin/AssetCacheManagerUtil deactivate'
       only_if { check_caching_status.include?('true') }
@@ -81,6 +84,7 @@ action_class do
     else
       status = cmd.chomp
     end
+
     status
   end
 end

@@ -1,26 +1,45 @@
 #
-# Cookbook Name:: cpe_osquery
+# Cookbook:: cpe_osquery
 # Attributes:: default
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 #
-# Copyright (c) 2019-present, Uber Technologies, Inc.
+# Copyright:: (c) 2019-present, Uber Technologies, Inc.
 # All rights reserved.
 #
 # This source code is licensed under the Apache 2.0 license found in the
 # LICENSE file in the root directory of this source tree.
 #
 
+base_bin_path = value_for_platform_family(
+  'mac_os_x' => '/usr/local/bin',
+  'debian' => '/usr/bin',
+  'windows' => 'C:\Program Files\osquery',
+)
+
+osquery_dir = value_for_platform_family(
+  'windows' => 'C:\Program Files\osquery',
+  'debian' => '/etc/osquery',
+  'mac_os_x' => '/var/osquery',
+  'default' => nil,
+)
+
 default['cpe_osquery'] = {
+  'base_bin_path' => base_bin_path,
+  'conf' => {},
+  'extensions' => [],
   'install' => false,
+  'manage' => false,
+  'manage_official_packs' => false,
+  'official_packs_install_list' => [],
+  'options' => {},
+  'osquery_dir' => osquery_dir,
+  'packs' => {},
   'pkg' => {
     'name' => nil,
     'checksum' => nil,
     'version' => nil,
-    'receipt' => nil,
+    'receipt' => 'com.facebook.osquery',
   },
-  'manage' => false,
-  'options' => {},
-  'extensions' => [],
   'uninstall' => false,
 }

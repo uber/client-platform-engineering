@@ -1,10 +1,10 @@
 #
-# Cookbook Name:: cpe_anyconnect
+# Cookbook:: cpe_anyconnect
 # Attributes:: default
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 #
-# Copyright (c) 2021-present, Uber Technologies, Inc.
+# Copyright:: (c) 2021-present, Uber Technologies, Inc.
 # All rights reserved.
 #
 # This source code is licensed under the Apache 2.0 license found in the
@@ -33,6 +33,7 @@ default['cpe_anyconnect'] = {
   ],
   'desktop_shortcut' => false,
   'uninstall' => false,
+  'umbrella_diagnostic_link' => nil,
 }
 
 case node['platform_family']

@@ -1,15 +1,16 @@
 #
-# Cookbook Name:: cpe_chefclient
+# Cookbook:: cpe_chefclient
 # Resources:: cpe_chefclient
 #
 # vim: syntax=ruby:expandtab:shiftwidth=2:softtabstop=2:tabstop=2
 #
-# Copyright (c) 2019-present, Uber Technologies, Inc.
+# Copyright:: (c) 2019-present, Uber Technologies, Inc.
 # All rights reserved.
 #
 # This source code is licensed under the Apache 2.0 license found in the
 # LICENSE file in the root directory of this source tree.
 #
+unified_mode true
 
 resource_name :cpe_chefclient
 provides :cpe_chefclient, :os => ['darwin', 'linux', 'windows']
@@ -40,6 +41,7 @@ action_class do # rubocop:disable Metrics/BlockLength
       ohai = conf.key?('ohai') ? conf['ohai'].compact : {}
       ## This should work even if only one has contents
       next if chef.empty? && ohai.empty?
+
       config_path = ::File.join(
         chef_path,
         "#{conf_name}.rb",
@@ -111,9 +113,9 @@ action_class do # rubocop:disable Metrics/BlockLength
   def update_json_file(configs_to_manage, json_path)
     # Update our json file (if needed) with the new contents of our items
     file json_path do
-      mode '0644' unless node.windows?
-      owner root_owner unless node.windows?
-      group root_group unless node.windows?
+      mode '0644' unless windows?
+      owner root_owner unless windows?
+      group node['root_group'] unless windows?
       content Chef::JSONCompat.to_json_pretty(configs_to_manage)
     end
   end
