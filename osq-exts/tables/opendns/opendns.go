@@ -5,7 +5,7 @@ import (
 	"log"
 	"net"
 	"strings"
-	"fmt"
+	"time"
 
 	"github.com/osquery/osquery-go/plugin/logger"
 	"github.com/osquery/osquery-go/plugin/table"
@@ -14,16 +14,8 @@ import (
 const (
 	_PLUGIN_NAME   = "opendns"
 	_DEBUG_OPENDNS = "debug.opendns.com"
-	_ACTIVE        = "active"
-	_SERVER        = "server"
-	_ORIGINID      = "originid"
-	_SOURCE        = "source"
-	_ACTYPE        = "actype"
-	_ORGID         = "orgid"
-	_BUNDLE        = "bundle"
-	_DEVICE        = "device"
-	_USER          = "user"
-	_DNSCRYPT      = "dnscrypt"
+	_KEY           = "key"
+	_VALUE         = "value"
 )
 
 type OpenDNS struct{}
@@ -34,16 +26,8 @@ func New() (odns *OpenDNS, err error) {
 
 func (odns *OpenDNS) Columns() []table.ColumnDefinition {
 	return []table.ColumnDefinition{
-		table.BigIntColumn(_ACTIVE),
-		table.TextColumn(_SERVER),
-		table.TextColumn(_SOURCE),
-		table.TextColumn(_DNSCRYPT),
-		table.TextColumn(_USER),
-		table.TextColumn(_DEVICE),
-		table.BigIntColumn(_ORIGINID),
-		table.BigIntColumn(_ACTYPE),
-		table.BigIntColumn(_ORGID),
-		table.BigIntColumn(_BUNDLE),
+		table.BigIntColumn(_KEY),
+		table.BigIntColumn(_VALUE),
 	}
 }
 
@@ -57,9 +41,7 @@ func (odns *OpenDNS) Generate(ctx context.Context, queryContext table.QueryConte
 		return nil, err
 	}
 
-	return []map[string]string{
-		prepareResults(txtrecords),
-	}, nil
+	return prepareResults(txtrecords), nil
 }
 
 func (odns *OpenDNS) Logger() (string, logger.LogFunc) {
@@ -71,29 +53,31 @@ func (odns *OpenDNS) Log(ctx context.Context, typ logger.LogType, logText string
 	return
 }
 
-func prepareResults(in []string) (ret map[string]string) {
-
-	ret = map[string]string{
-		_ACTIVE: fmt.Sprintf("%v", len(in)),
-	}
+func prepareResults(in []string) (ret []map[string]string) {
 
 	for _, txt := range in {
 		out := strings.Split(txt, " ")
-
-		// Remove last element in dnscrypt
-		// since we want dnscrypt status
-		if out[0] == "dnscrypt" {
-			out = out[:len(out)-1]
-		}
-
-		ret[out[0]] = out[len(out)-1]
+		tmp := make(map[string]string)
+		tmp[out[0]] = txt
+		ret = append(ret, tmp)
 	}
 
 	return
 }
 
 func getTXTRecords(ctx context.Context, query string) ([]string, error) {
-	r := net.Resolver{}
+	r := net.Resolver{
+		PreferGo: true,
+		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+			d := net.Dialer{
+				Timeout: 3 * time.Second,
+			}
+			// forcing TCP as a workaround to this bug
+			// https://github.com/golang/go/issues/21160
+			// review again in golang 1.19
+			return d.DialContext(ctx, "tcp", address)
+		},
+	}
+
 	return r.LookupTXT(ctx, query)
-	//return net.LookupTXT(query)
 }
