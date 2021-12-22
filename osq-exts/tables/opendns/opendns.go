@@ -26,8 +26,8 @@ func New() (odns *OpenDNS, err error) {
 
 func (odns *OpenDNS) Columns() []table.ColumnDefinition {
 	return []table.ColumnDefinition{
-		table.BigIntColumn(_KEY),
-		table.BigIntColumn(_VALUE),
+		table.TextColumn(_KEY),
+		table.TextColumn(_VALUE),
 	}
 }
 
@@ -56,10 +56,15 @@ func (odns *OpenDNS) Log(ctx context.Context, typ logger.LogType, logText string
 func prepareResults(in []string) (ret []map[string]string) {
 
 	for _, txt := range in {
-		out := strings.Split(txt, " ")
-		tmp := make(map[string]string)
-		tmp[out[0]] = txt
-		ret = append(ret, tmp)
+		split := strings.Split(txt, " ")
+		out := make(map[string]string)
+		out[_KEY] = split[0]
+
+		if len(split[1:]) > 0 {
+			out[_VALUE] = strings.Join(split[1:], " ")
+		}
+
+		ret = append(ret, out)
 	}
 
 	return
