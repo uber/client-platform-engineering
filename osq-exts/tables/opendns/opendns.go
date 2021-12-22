@@ -56,6 +56,11 @@ func (odns *OpenDNS) Log(ctx context.Context, typ logger.LogType, logText string
 func prepareResults(in []string) (ret []map[string]string) {
 
 	for _, txt := range in {
+
+		if txt == "" {
+			continue
+		}
+
 		split := strings.Split(txt, " ")
 		out := make(map[string]string)
 		out[_KEY] = split[0]

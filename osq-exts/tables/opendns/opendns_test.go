@@ -17,6 +17,14 @@ var (
 		"user id 5e4d3c2b1a",
 		"dnscrypt enabled (1234)",
 	}
+
+	_SINGLE_ELEMENT_RECORD = []string{
+		"single_element_test",
+	}
+
+	_BLANK_KEY_TEST = []string{
+		"",
+	}
 )
 
 func TestTXTRecords(t *testing.T) {
@@ -28,8 +36,26 @@ func TestTXTRecords(t *testing.T) {
 	}
 }
 
+func TestPrepareWithBlankKey(t *testing.T) {
+	results := prepareResults(_BLANK_KEY_TEST)
+
+	if len(results) > 1 {
+		t.Fatal("should be blank")
+	}
+
+}
+
+func TestPrepareWithSingleElementRecord(t *testing.T) {
+	results := prepareResults(_SINGLE_ELEMENT_RECORD)
+
+	if len(results) != len(_SINGLE_ELEMENT_RECORD) {
+		t.Fatal("len not equal")
+	}
+}
+
 func TestPrepareWithResults(t *testing.T) {
 	results := prepareResults(_FAKE_TXT_RECORDS)
+
 	if len(results) != len(_FAKE_TXT_RECORDS) {
 		t.Fatal("len not equal")
 	}
