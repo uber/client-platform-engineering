@@ -2,15 +2,15 @@ package main
 
 import (
 	"flag"
-	"log"
-	"os"
-	"runtime"
-	"time"
 	"github.com/osquery/osquery-go"
 	"github.com/osquery/osquery-go/plugin/logger"
 	"github.com/osquery/osquery-go/plugin/table"
 	"github.com/uber/client-platform-engineering/osq-exts/tables/crowdstrikefalconagent"
 	"github.com/uber/client-platform-engineering/osq-exts/tables/ima"
+	"github.com/uber/client-platform-engineering/osq-exts/tables/opendns"
+	"log"
+	"os"
+	"time"
 )
 
 const (
@@ -38,6 +38,11 @@ func listOfPlugins() (plugins []osquery.OsqueryPlugin) {
 
 	if measurements, err := ima.NewMeasurements(); err == nil {
 		plugins = append(plugins, table.NewPlugin(measurements.Register()))
+	}
+
+	if opendns, err := opendns.New(); err == nil {
+		plugins = append(plugins, table.NewPlugin(opendns.Register()))
+		plugins = append(plugins, logger.NewPlugin(opendns.Logger()))
 	}
 
 	return
