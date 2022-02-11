@@ -59,7 +59,7 @@ action_class do # rubocop:disable Metrics/BlockLength
     run_install_logic = true
     [falcon_agent_prefs.to_hash, falcon_pkg_prefs.to_hash].each do |hash|
       # Grab the keys and check if they are empty strings or nils
-      hash.keys.each do |preference|
+      hash.each_key do |preference|
         if hash[preference].nil? || hash[preference].to_s.empty?
           # Warn and print out the bad key/value pairs
           Chef::Log.warn("cpe_crowdstrike_falcon_sensor incorrectly configured preference - #{preference}")
@@ -335,36 +335,57 @@ action_class do # rubocop:disable Metrics/BlockLength
 
     # Grouping Tags
     grouping_tags = node['cpe_crowdstrike_falcon_sensor']['grouping_tags']
-    return if grouping_tags.nil? || grouping_tags.empty?
-
-    append_grouping_tags(grouping_tags.split(',')) if node.at_least_big_sur?
+    node.safe_nil_empty?(grouping_tags) ? clear_grouping_tags : append_grouping_tags(grouping_tags)
   end
 
   # returns an array of existing grouping tags.
   def get_grouping_tags(falconctl_path = falcon_agent_prefs['falconctl_path'])
-    command = "#{falconctl_path} grouping-tags get"
-    command_out = shell_out(command)
-    command_tokenize = command_out.stdout.strip.split(': ')
-    return [] if command_tokenize[0].include?('No grouping tags set')
+    if macos?
+      command = "#{falconctl_path} grouping-tags get"
+      command_out = shell_out(command)
+      command_tokenize = command_out.stdout.strip.split(': ')
+      return [] if command_tokenize[0].include?('No grouping tags set')
 
-    return command_tokenize.last.split(',') unless command_tokenize.empty? && command_tokenize.length > 1
+      return command_tokenize.last.split(',') unless command_tokenize.empty? && command_tokenize.length > 1
 
-    return []
+      return []
+    elsif windows?
+      # Get subkey values
+      subkeys = registry_get_values(windows_grouping_tags_regkey)
+      return [] if node.safe_nil_empty?(subkeys)
+
+      subkeys.each do |key|
+        return key[:data].split(',') if key[:name] == 'GroupingTags'
+      end
+      return []
+    end
   end
 
   # append a new grouping tag to existing tags
   def append_grouping_tags(new_tags)
-    existing_tags = get_grouping_tags
-    delta_array = existing_tags.union(new_tags)
-    set_grouping_tags(delta_array) if delta_array.difference(existing_tags).any?
+    if macos? || windows?
+      existing_tags = get_grouping_tags
+      delta_array = existing_tags.union(new_tags)
+      set_grouping_tags(delta_array) if delta_array.sort != existing_tags.sort
+    end
   end
 
   # clear the sensor grouping tags
-  # TODO: This function is not used, needs to be hooked into management for admins to use in the future
   def clear_grouping_tags(falconctl_path = falcon_agent_prefs['falconctl_path'])
-    execute 'clear sensor grouping tags' do
-      command "#{falconctl_path} grouping-tags clear"
-      only_if { ::File.exists?(falconctl_path) }
+    if macos?
+      execute 'clear sensor grouping tags' do
+        command "#{falconctl_path} grouping-tags clear"
+        only_if { ::File.exists?(falconctl_path) }
+      end
+
+    elsif windows?
+      registry_key windows_grouping_tags_regkey do
+        values [{
+          :name => 'GroupingTags',
+          :type => :string,
+          :data => nil,
+        }]
+      end
     end
   end
 
@@ -372,16 +393,33 @@ action_class do # rubocop:disable Metrics/BlockLength
   def set_grouping_tags(new_tags, falconctl_path = falcon_agent_prefs['falconctl_path'])
     return unless new_tags.is_a?(Array)
 
-    execute 'set sensor grouping tags' do
-      command "#{falconctl_path} grouping-tags set #{new_tags.join(',')}"
-      not_if { new_tags.empty? }
-      only_if { ::File.exists?(falconctl_path) }
+    if macos?
+      execute 'set sensor grouping tags' do
+        command "#{falconctl_path} grouping-tags set #{new_tags.join(',')}"
+        not_if { new_tags.empty? }
+        only_if { ::File.exists?(falconctl_path) }
+      end
+
+    elsif windows?
+      registry_key windows_grouping_tags_regkey do
+        values [{
+          :name => 'GroupingTags',
+          :type => :string,
+          :data => new_tags.join(','),
+        }]
+      end
     end
   end
 
+  def windows_grouping_tags_regkey
+    'HKEY_LOCAL_MACHINE\SYSTEM\CrowdStrike\{9b03c1d9-3138-44ed-9fae-d9f4c034b88d}'\
+    '\{16e0423f-7058-48c9-a204-725362b67639}\Default'
+  end
+
   def windows_manage
-    # TODO: need to write
-    return
+    # Grouping Tags
+    grouping_tags = node['cpe_crowdstrike_falcon_sensor']['grouping_tags']
+    node.safe_nil_empty?(grouping_tags) ? clear_grouping_tags : append_grouping_tags(grouping_tags)
   end
 
   def uninstall
@@ -398,7 +436,7 @@ action_class do # rubocop:disable Metrics/BlockLength
       check_hash[:uninstall_version] = falcon_pkg_prefs['uninstall_version']
     end
     # Grab the keys and check if they are empty strings or nils
-    check_hash.keys.each do |preference|
+    check_hash.each_key do |preference|
       if check_hash[preference].to_s.empty? || check_hash[preference].nil?
         # Warn and print out the bad key/value pairs
         Chef::Log.warn('cpe_crowdstrike_falcon_sensor incorrectly configured. Skipping uninstall')
@@ -513,11 +551,9 @@ action_class do # rubocop:disable Metrics/BlockLength
   def check_falconctl_registration(falconctl_path = falcon_agent_prefs['falconctl_path'])
     # Blank strings for our comparisons vs nil because of our guards.
     status = ''
-    if debian? || macos?
-      unless ::File.exists?(falconctl_path)
-        return status
-      end
-    end
+
+    return status if (debian? || macos?) && !::File.exists?(falconctl_path)
+
     if macos?
       cmd = shell_out("#{falconctl_path} stats").stdout.to_s
       if cmd.nil? || cmd.empty?

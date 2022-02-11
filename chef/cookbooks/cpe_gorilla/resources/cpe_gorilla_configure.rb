@@ -22,7 +22,7 @@ action :manage do
   remove if uninstall?
 end
 
-action_class do
+action_class do # rubocop:disable Metrics/BlockLength
   def install?
     node['cpe_gorilla']['install']
   end
@@ -46,24 +46,24 @@ action_class do
 
     # Create Gorilla folder
     directory node['cpe_gorilla']['dir'] do
-      rights :read, 'Everyone'
-      rights :full_control, 'Administrators'
+      rights :read, 'S-1-1-0' # Everyone
+      rights :full_control, 'S-1-5-32-544' # Administrators
       action :create
     end
 
     # Install local manifest file
     local_manifest_path = ::File.join(node['cpe_gorilla']['dir'], 'chef_manifest.yaml')
     file local_manifest_path do
-      rights :read, 'Everyone'
-      rights :full_control, 'Administrators'
+      rights :read, 'S-1-1-0' # Everyone
+      rights :full_control, 'S-1-5-32-544' # Administrators
       content YAML.dump(JSON.parse(local_manifest.to_json)) # Have to convert to json first for hashes due to a chef bug
     end
 
     # Install YAML configuration file
     config_yaml = ::File.join(node['cpe_gorilla']['dir'], 'config.yaml')
     file config_yaml do
-      rights :read, 'Everyone'
-      rights :full_control, 'Administrators'
+      rights :read, 'S-1-1-0' # Everyone
+      rights :full_control, 'S-1-5-32-544' # Administrators
       content YAML.dump(JSON.parse(gorilla_prefs.to_json)) # Have to convert to json first for hashes due to a chef bug
     end
 
@@ -77,8 +77,8 @@ action_class do
     # Create Gorilla bin folder
     bin_dir = ::File.join(node['cpe_gorilla']['dir'], 'bin')
     directory bin_dir do
-      rights :read, 'Everyone'
-      rights :full_control, 'Administrators'
+      rights :read, 'S-1-1-0' # Everyone
+      rights :full_control, 'S-1-5-32-544' # Administrators
       action :create
     end
 
