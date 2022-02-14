@@ -764,18 +764,16 @@ class Chef
       system_extension_installed = false
       unless node.at_least?(node.chef_version, '17.7.22')
         Chef::Log.warn('node.system_extension_installed? requires chef v17.7.22 and higher!')
-        return extension_enabled
+        return system_extension_installed
       end
       unless macos?
         Chef::Log.warn('node.system_extension_installed? called on non-OS X!')
-        return extension_enabled
+        return system_extension_installed
       end
       CF::Preferences.get('extensions', '/Library/SystemExtensions/db.plist').each do |k, _v|
         relative_file_path = k['stagedBundleURL']['relative']
-        unless relative_file_path.nil?
-          if relative_file_path.include?(extension_identifier)
-            system_extension_installed = ::File.exists?(relative_file_path.split('file://')[1])
-          end
+        if relative_file_path&.include?(extension_identifier)
+          system_extension_installed = ::File.exists?(relative_file_path.split('file://')[1])
         end
       end
       return system_extension_installed
@@ -851,6 +849,80 @@ class Chef
 
     def at_least_big_sur?
       node.os_at_least?('11.0') || node.os_at_least?('10.16')
+    end
+
+    def bplist?(file_path)
+      if ::File.exists?(file_path)
+        shell_out("/usr/bin/file #{file_path}").run_command.stdout.include?('Apple binary property list')
+      end
+    end
+
+    def nslookup_txt_records(domain, timeout = 3)
+      results = {}
+      unless macos?
+        Chef::Log.warn('node.nslookup called on non-OS X!')
+        return nil
+      end
+      records = shell_out(
+        "/usr/bin/nslookup -type=txt #{domain} -timeout=#{timeout}",
+      ).run_command.stdout.to_s.scan(/text = "(.*)"/).flatten
+      records.each do |line|
+        if domain == 'debug.opendns.com'
+          if line.include?('flags') || line.include?('dnscrypt')
+            split_line = line.split(' ', 2)
+            results[split_line[0]] = split_line[1]
+          else
+            split_line = line.rpartition(' ')
+            results[split_line.first] = split_line.last
+          end
+        else
+          split_line = line.rpartition(' ')
+          results[split_line.first] = split_line.last
+        end
+      end
+      results
+    end
+
+    def daemon_running?(daemon)
+      unless macos?
+        Chef::Log.warn('node.dameon_running? called on non-OS X!')
+        return nil
+      end
+      shell_out('/bin/launchctl list').run_command.stdout.to_s[/(.*)#{daemon}/].nil? ? false : true
+    end
+
+    def macos_boottime
+      unless macos?
+        Chef::Log.warn('node.macos_boottime called on non-OS X!')
+        return nil
+      end
+      shell_out('/usr/sbin/sysctl -n kern.boottime').run_command.stdout.to_s[/sec = (.*),/, 1].to_i
+    end
+
+    def macos_waketime
+      unless macos?
+        Chef::Log.warn('node.macos_boottime called on non-OS X!')
+        return nil
+      end
+      shell_out('/usr/sbin/sysctl -n kern.waketime').run_command.stdout.to_s[/sec = (.*),/, 1].to_i
+    end
+
+    def macos_process_uptime(process)
+      uptime = 0
+      unless macos?
+        Chef::Log.warn('node.macos_process_time called on non-OS X!')
+        return nil
+      end
+      time = shell_out('/bin/ps acxo etime,command').run_command.stdout.to_s[/(.*) #{process}/, 1]
+      unless time.nil?
+        safe_time = time.strip.split(':')
+        if safe_time.count == 3
+          uptime = safe_time[0].to_i * 360 + safe_time[1].to_i * 60 + safe_time[2].to_i
+        elsif safe_time.count == 2
+          uptime = safe_time[0].to_i * 60 + safe_time[1].to_i
+        end
+      end
+      uptime
     end
   end
 end

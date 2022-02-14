@@ -18,9 +18,18 @@ Attributes
 ----------
 * node['cpe_anyconnect']
 * node['cpe_anyconnect']['app_path']
+* node['cpe_anyconnect']['desktop_shortcut']
 * node['cpe_anyconnect']['install']
 * node['cpe_anyconnect']['la_gui_identifier']
 * node['cpe_anyconnect']['manage']
+* node['cpe_anyconnect']['modules']['name']
+* node['cpe_anyconnect']['modules']['display_name']
+* node['cpe_anyconnect']['modules']['version']
+* node['cpe_anyconnect']['modules']['checksum']
+* node['cpe_anyconnect']['modules']['install_args']
+* node['cpe_anyconnect']['backup_logs']
+* node['cpe_anyconnect']['nslookup_failure_count_threshold']
+* node['cpe_anyconnect']['organization_id']
 * node['cpe_anyconnect']['pkg']
 * node['cpe_anyconnect']['pkg']['allow_downgrade']
 * node['cpe_anyconnect']['pkg']['app_name']
@@ -28,14 +37,8 @@ Attributes
 * node['cpe_anyconnect']['pkg']['checksum']
 * node['cpe_anyconnect']['pkg']['receipt']
 * node['cpe_anyconnect']['pkg']['version']
-* node['cpe_anyconnect']['modules']['name']
-* node['cpe_anyconnect']['modules']['display_name']
-* node['cpe_anyconnect']['modules']['version']
-* node['cpe_anyconnect']['modules']['checksum']
-* node['cpe_anyconnect']['modules']['install_args']
-* node['cpe_anyconnect']['desktop_shortcut']
-* node['cpe_anyconnect']['uninstall']
 * node['cpe_anyconnect']['umbrella_diagnostic_link']
+* node['cpe_anyconnect']['uninstall']
 
 A base install config might look like this
 ```
@@ -78,4 +81,12 @@ node.default['cpe_anyconnect']['modules'] = [
   },
 ]
 node.default['cpe_anyconnect']['desktop_shortcut'] = true
+```
+An example of setting the nslookup_failure_count_threshold other than default (macOS only)
+```
+node.default['cpe_anyconnect']['nslookup_failure_count_threshold'] = 5
+```
+An example of setting the attribute backup_logs to trigger a log backup before directory deletion (macOS only)
+```
+node.default['cpe_anyconnect']['backup_logs'] = true
 ```

@@ -68,31 +68,13 @@ action_class do # rubocop:disable Metrics/BlockLength
       allow_downgrade = False
     end
 
-    launchd 'com.cisco.anyconnect.vpnagentd' do
-      only_if { ::File.exist?('/Library/LaunchDaemons/com.cisco.anyconnect.vpnagentd.plist') }
-      action :nothing
-      type 'daemon'
-    end
-
     execute "/usr/sbin/installer -applyChoiceChangesXML #{cc_xml_path} -pkg #{pkg_path(pkg)} -target /" do
       # functionally equivalent to allow_downgrade false on cpe_remote_pkg
       unless allow_downgrade
-        not_if do
-          installed_pkg_version = shell_out(
-            "/usr/sbin/pkgutil --pkg-info \"#{pkg['receipt']}\"",
-          ).run_command.stdout.to_s[/version: (.*)/, 1]
-          # Compare the installed version to the minimum version
-          if installed_pkg_version.nil?
-            Chef::Log.warn("Package #{pkg['receipt']} returned nil.")
-            false
-          end
-          Gem::Version.new(installed_pkg_version) >= Gem::Version.new(pkg['version'])
-        end
+        not_if { node.macos_min_package_installed?(pkg['receipt'], pkg['version']) }
       end
       not_if { anyconnect_vpn_connected? }
       notifies :create, 'file[trigger_gui]', :immediately
-      # if vpnagentd is disabled, cisco package will fail to install and tank chef runs
-      notifies :enable, 'launchd[com.cisco.anyconnect.vpnagentd]', :before
     end
 
     # We only want the UI to trigger upon the first install and upgrades.
@@ -161,9 +143,77 @@ action_class do # rubocop:disable Metrics/BlockLength
   def macos_manage
     # If the Anyconnect App goes missing, either by accident or abuse, trigger re-install
     ac_receipt = node['cpe_anyconnect']['pkg']['receipt']
+    orgid = node['cpe_anyconnect']['organization_id']
     unless ::Dir.exist?(node['cpe_anyconnect']['app_path'])
       execute "/usr/sbin/pkgutil --forget #{ac_receipt}" do
         not_if { shell_out("/usr/sbin/pkgutil --pkg-info #{ac_receipt}").error? }
+      end
+    end
+
+    # We only want the UI to trigger upon the first install and upgrades.
+    # In testing, their own postinstall script logic is very unreliable.
+    # Touch the gui_keepalive path and then restart the agent will trigger the UI
+    gui_la_label = node['cpe_anyconnect']['la_gui_identifier']
+    file 'trigger_gui' do
+      action :nothing
+      only_if { ::File.exist?("/Library/LaunchAgents/#{gui_la_label}.plist") }
+      path '/opt/cisco/anyconnect/gui_keepalive'
+      notifies :restart, "launchd[#{gui_la_label}]", :immediately
+    end
+
+    launchd gui_la_label do
+      type 'agent'
+      action :nothing
+    end
+
+    # Ensure the anyconnect VPN Agent daemon is enabled
+    launchd 'com.cisco.anyconnect.vpnagentd-manage' do
+      action :enable
+      label 'com.cisco.anyconnect.vpnagentd'
+      only_if { ::File.exist?('/Library/LaunchDaemons/com.cisco.anyconnect.vpnagentd.plist') }
+      type 'daemon'
+      notifies :create, 'file[trigger_gui]', :immediately
+    end
+
+    # Disable VPN and trigger a re-enroll by deleting the data folder if the nslookup fails
+    # Backup logs before directory deletion option.
+    unless orgid.nil?
+      ruby_block 'backup beacon logs' do
+        block do
+          Chef::Log.info(
+            'Backup beacon /opt/cisco/anyconnect/umbrella/data/beacon-logs/ ' \
+            '- trigger re-enroll of anyconnect client',
+          )
+          require 'fileutils'
+          FileUtils.cp_r(
+            '/opt/cisco/anyconnect/umbrella/data/beacon-logs',
+            anyconnect_root_cache_path,
+          )
+        end
+        action :nothing
+        only_if { node['cpe_anyconnect']['backup_logs'] }
+      end
+
+      directory '/opt/cisco/anyconnect/umbrella/data' do
+        action :nothing
+        notifies :disable, 'launchd[com.cisco.anyconnect.vpnagentd-manage]', :before
+        notifies :enable, 'launchd[com.cisco.anyconnect.vpnagentd-manage]', :immediately
+        recursive true
+      end
+
+      ruby_block 'Delete /opt/cisco/anyconnect/umbrella/data - trigger re-enroll of anyconnect client' do
+        block do
+          Chef::Log.info('Delete /opt/cisco/anyconnect/umbrella/data - trigger re-enroll of anyconnect client')
+        end
+        notifies :run, 'ruby_block[backup beacon logs]', :immediately
+        notifies :delete, 'directory[/opt/cisco/anyconnect/umbrella/data]', :immediately
+        not_if { nslookup(orgid) }
+        only_if { node.macos_min_package_installed?(ac_receipt, '4.9.06037') }
+        only_if { node.daemon_running?('com.cisco.anyconnect.vpnagentd') } # must be loaded to return nslookup data
+        only_if { Time.now.to_i - Time.at(node.macos_boottime).to_i >= 300 } # takes a bit to fully load on boot
+        only_if { Time.now.to_i - Time.at(node.macos_waketime).to_i >= 300 } # takes a bit to fully load upon wake
+        # anyconnect must be on for a few to fully activate nslookup, otherwise this could loop infinitely
+        only_if { node.macos_process_uptime('vpnagentd') >= 300 }
       end
     end
   end
@@ -389,5 +439,39 @@ action_class do # rubocop:disable Metrics/BlockLength
 
     status = powershell_out('(Get-Service vpnagent).status').stdout.to_s.chomp
     status.empty? ? nil : status
+  end
+
+  def nslookup(orgid)
+    count = 0
+    json_path = ::File.join(anyconnect_root_cache_path, 'cpe_anyconnect.json')
+    guard_successful = true
+    unless node.nslookup_txt_records('debug.opendns.com')['orgid'] == orgid
+      if ::File.exists?(json_path)
+        count = node.parse_json(json_path)['nslookup_failures'] + 1
+      else
+        count = 1
+      end
+    end
+
+    if count > node['cpe_anyconnect']['nslookup_failure_count_threshold']
+      count = 0
+      guard_successful = false
+    end
+
+    write_json(count, json_path)
+    return guard_successful
+  end
+
+  def write_json(count, json_path)
+    if count == 0
+      file json_path do
+        action :delete
+      end
+    else
+      file json_path do
+        action :create
+        content Chef::JSONCompat.to_json_pretty({ 'nslookup_failures' => count })
+      end
+    end
   end
 end

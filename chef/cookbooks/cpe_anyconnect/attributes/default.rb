@@ -12,9 +12,22 @@
 #
 
 default['cpe_anyconnect'] = {
+  'desktop_shortcut' => false,
   'install' => false,
   'la_gui_identifier' => 'com.cisco.anyconnect.gui',
   'manage' => false,
+  'modules' => [
+    {
+      'checksum' => nil,
+      'display_name' => nil,
+      'install_args' => nil,
+      'name' => nil,
+      'version' => nil,
+    },
+  ],
+  'backup_logs' => false,
+  'nslookup_failure_count_threshold' => 20,
+  'organization_id' => nil,
   'pkg' => {
     'allow_downgrade' => false,
     'app_name' => 'cisco_anyconnect',
@@ -22,18 +35,8 @@ default['cpe_anyconnect'] = {
     'checksum' => nil,
     'version' => nil,
   },
-  'modules' => [
-    {
-      'name' => nil,
-      'display_name' => nil,
-      'version' => nil,
-      'checksum' => nil,
-      'install_args' => nil,
-    },
-  ],
-  'desktop_shortcut' => false,
-  'uninstall' => false,
   'umbrella_diagnostic_link' => nil,
+  'uninstall' => false,
 }
 
 case node['platform_family']

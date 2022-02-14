@@ -7,3 +7,4 @@ version '0.1.0'
 chef_version '>= 14.14'
 
 depends 'cpe_remote'
+depends 'uber_helpers'
