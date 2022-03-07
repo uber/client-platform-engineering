@@ -169,7 +169,7 @@ class Chef
 
     def catalina?
       unless macos?
-        Chef::Log.warn('node.catalina? called on non-OS X!')
+        Chef::Log.warn('node.catalina? called on non-macOS!')
         return
       end
       return node.os_at_least?('10.15') && node.os_less_than?('10.16')
@@ -207,7 +207,7 @@ class Chef
 
     def el_capitan?
       unless macos?
-        Chef::Log.warn('node.el_capitan? called on non-OS X!')
+        Chef::Log.warn('node.el_capitan? called on non-macOS!')
         return
       end
       return node.os_at_least?('10.11') && node.os_less_than?('10.12')
@@ -236,7 +236,7 @@ class Chef
 
     def high_sierra?
       unless macos?
-        Chef::Log.warn('node.high_sierra? called on non-OS X!')
+        Chef::Log.warn('node.high_sierra? called on non-macOS!')
         return
       end
       return node.os_at_least?('10.13') && node.os_less_than?('10.14')
@@ -297,7 +297,7 @@ class Chef
 
     def macos_application_version(apppath, key)
       unless macos?
-        Chef::Log.warn('node.macos_application_version called on non-OS X!')
+        Chef::Log.warn('node.macos_application_version called on non-macOS!')
         return ''
       end
       if ::File.exist?(apppath)
@@ -313,7 +313,7 @@ class Chef
 
     def macos_system_cert_installed?(cert_name)
       unless macos?
-        Chef::Log.warn('node.macos_cert_installed? called on non-OS X!')
+        Chef::Log.warn('node.macos_cert_installed? called on non-macOS!')
         return false
       end
       shell_out(
@@ -323,7 +323,7 @@ class Chef
 
     def macos_system_cert_hash?(cert_name)
       unless macos?
-        Chef::Log.warn('node.macos_cert_hash? called on non-OS X!')
+        Chef::Log.warn('node.macos_cert_hash? called on non-macOS!')
         return ''
       end
       shell_out(
@@ -333,7 +333,7 @@ class Chef
 
     def macos_package_installed?(pkg_identifier, pkg_version)
       unless macos?
-        Chef::Log.warn('node.macos_package_installed? called on non-OS X!')
+        Chef::Log.warn('node.macos_package_installed? called on non-macOS!')
         false
       end
       installed_pkg_version = shell_out(
@@ -349,7 +349,7 @@ class Chef
 
     def macos_min_package_installed?(pkg_identifier, pkg_version)
       unless macos?
-        Chef::Log.warn('node.macos_min_package_installed? called on non-OS X!')
+        Chef::Log.warn('node.macos_min_package_installed? called on non-macOS!')
         false
       end
       installed_pkg_version = shell_out(
@@ -365,7 +365,7 @@ class Chef
 
     def macos_package_present?(pkg_identifier)
       unless macos?
-        Chef::Log.warn('node.macos_package_present? called on non-OS X!')
+        Chef::Log.warn('node.macos_package_present? called on non-macOS!')
         return false
       end
       installed_pkg_version = shell_out(
@@ -380,7 +380,7 @@ class Chef
 
     def mojave?
       unless macos?
-        Chef::Log.warn('node.mojave? called on non-OS X!')
+        Chef::Log.warn('node.mojave? called on non-macOS!')
         return
       end
       return node.os_at_least?('10.14') && node.os_less_than?('10.15')
@@ -413,7 +413,7 @@ class Chef
 
     def sierra?
       unless macos?
-        Chef::Log.warn('node.sierra? called on non-OS X!')
+        Chef::Log.warn('node.sierra? called on non-macOS!')
         return
       end
       return node.os_at_least?('10.12') && node.os_less_than?('10.13')
@@ -513,7 +513,7 @@ class Chef
 
     def yosemite?
       unless macos?
-        Chef::Log.warn('node.yosemite? called on non-OS X!')
+        Chef::Log.warn('node.yosemite? called on non-macOS!')
         return
       end
       return node.os_at_least?('10.10') && node.os_less_than?('10.11')
@@ -641,7 +641,7 @@ class Chef
       @macos_os_sub_version ||=
         begin
           unless macos?
-            Chef::Log.warn('node.macos_os_sub_version called on non-OS X!')
+            Chef::Log.warn('node.macos_os_sub_version called on non-macOS!')
             return '0'
           end
           cmd = shell_out('/usr/sbin/sysctl -n kern.osversion').run_command.stdout
@@ -741,7 +741,7 @@ class Chef
         return extension_enabled
       end
       unless macos?
-        Chef::Log.warn('node.network_extension_enabled? called on non-OS X!')
+        Chef::Log.warn('node.network_extension_enabled? called on non-macOS!')
         return extension_enabled
       end
       # Everything is in a key of "$objects"
@@ -767,7 +767,7 @@ class Chef
         return system_extension_installed
       end
       unless macos?
-        Chef::Log.warn('node.system_extension_installed? called on non-OS X!')
+        Chef::Log.warn('node.system_extension_installed? called on non-macOS!')
         return system_extension_installed
       end
       CF::Preferences.get('extensions', '/Library/SystemExtensions/db.plist').each do |k, _v|
@@ -783,7 +783,7 @@ class Chef
     # nil value if the package is not installed.
     def installed_pkg_version(pkg_identifier)
       unless macos?
-        Chef::Log.warn('node.installed_pkg_version called on non-OS X!')
+        Chef::Log.warn('node.installed_pkg_version called on non-macOS!')
         return nil
       end
       installed_pkg_version = shell_out(
@@ -860,7 +860,7 @@ class Chef
     def nslookup_txt_records(domain, timeout = 3)
       results = {}
       unless macos?
-        Chef::Log.warn('node.nslookup called on non-OS X!')
+        Chef::Log.warn('node.nslookup called on non-macOS!')
         return nil
       end
       records = shell_out(
@@ -885,7 +885,7 @@ class Chef
 
     def daemon_running?(daemon)
       unless macos?
-        Chef::Log.warn('node.dameon_running? called on non-OS X!')
+        Chef::Log.warn('node.dameon_running? called on non-macOS!')
         return nil
       end
       shell_out('/bin/launchctl list').run_command.stdout.to_s[/(.*)#{daemon}/].nil? ? false : true
@@ -893,7 +893,7 @@ class Chef
 
     def macos_boottime
       unless macos?
-        Chef::Log.warn('node.macos_boottime called on non-OS X!')
+        Chef::Log.warn('node.macos_boottime called on non-macOS!')
         return nil
       end
       shell_out('/usr/sbin/sysctl -n kern.boottime').run_command.stdout.to_s[/sec = (.*),/, 1].to_i
@@ -901,7 +901,7 @@ class Chef
 
     def macos_waketime
       unless macos?
-        Chef::Log.warn('node.macos_boottime called on non-OS X!')
+        Chef::Log.warn('node.macos_boottime called on non-macOS!')
         return nil
       end
       shell_out('/usr/sbin/sysctl -n kern.waketime').run_command.stdout.to_s[/sec = (.*),/, 1].to_i
@@ -910,7 +910,7 @@ class Chef
     def macos_process_uptime(process)
       uptime = 0
       unless macos?
-        Chef::Log.warn('node.macos_process_time called on non-OS X!')
+        Chef::Log.warn('node.macos_process_time called on non-macOS!')
         return nil
       end
       time = shell_out('/bin/ps acxo etime,command').run_command.stdout.to_s[/(.*) #{process}/, 1]
