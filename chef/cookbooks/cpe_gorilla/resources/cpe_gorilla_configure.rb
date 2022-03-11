@@ -130,6 +130,12 @@ action_class do # rubocop:disable Metrics/BlockLength
     windows_path bin_dir do
       action :add
     end
+
+    # Enable scheduled task if it is disabled
+    windows_task node['cpe_gorilla']['exe']['name'] do
+      action :enable
+    end
+  
   end
 
   def remove
