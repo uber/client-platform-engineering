@@ -7,3 +7,6 @@ The following [Facebook cookbooks](https://github.com/facebook/IT-CPE) will more
 - cpe_profiles
 - cpe_remote
 - cpe_utils
+
+## Legacy cookbooks
+Cookbooks found in the `legacy` folder are no longer actively maintained by Uber, due to us no longer using the associated tools.

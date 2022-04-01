@@ -12,14 +12,14 @@
 #
 
 base_bin_path = value_for_platform_family(
-  'mac_os_x' => '/usr/local/bin',
-  'debian' => '/usr/bin',
+  'mac_os_x' => '/opt/osquery/lib/osquery.app/Contents/MacOS',
+  'debian' => '/opt/osquery/bin',
   'windows' => 'C:\Program Files\osquery',
 )
 
 osquery_dir = value_for_platform_family(
   'windows' => 'C:\Program Files\osquery',
-  'debian' => '/etc/osquery',
+  'debian' => '/opt/osquery/share/osquery',
   'mac_os_x' => '/var/osquery',
   'default' => nil,
 )
@@ -39,7 +39,7 @@ default['cpe_osquery'] = {
     'name' => nil,
     'checksum' => nil,
     'version' => nil,
-    'receipt' => 'com.facebook.osquery',
+    'receipt' => 'io.osquery.agent',
   },
   'uninstall' => false,
 }
