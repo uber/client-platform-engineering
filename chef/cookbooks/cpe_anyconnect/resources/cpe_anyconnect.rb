@@ -187,7 +187,7 @@ action_class do # rubocop:disable Metrics/BlockLength
           require 'fileutils'
           FileUtils.cp_r(
             '/opt/cisco/anyconnect/umbrella/data/beacon-logs',
-            anyconnect_root_cache_path,
+            '/var/log',
           )
         end
         action :nothing

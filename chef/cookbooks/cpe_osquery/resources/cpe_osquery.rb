@@ -142,6 +142,16 @@ action_class do # rubocop:disable Metrics/BlockLength
     end
   end
 
+  def service_info
+    # Set service/daemon information so we can trigger restarts cross platform
+    value_for_platform_family(
+      'mac_os_x' => { 'launchd' => 'com.facebook.osqueryd' },
+      'debian' => { 'service' => 'osqueryd.service' },
+      'windows' => { 'service' => 'osqueryd' },
+      'default' => nil,
+    )
+  end
+
   def manage
     ## TODO: - Manage configs on disk as well as flag files.
     ## Not everyone will have a TLS server for query scheduling
@@ -159,14 +169,6 @@ action_class do # rubocop:disable Metrics/BlockLength
         mode '0700'
       end
     end
-    # Set service/daemon information so we can trigger restarts cross platform
-    service_info = value_for_platform_family(
-      'mac_os_x' => { 'launchd' => 'com.facebook.osqueryd' },
-      ## Specify osqueryd for 14, osqueryd.service for 16+
-      'debian' => { 'service' => 'osqueryd.service' },
-      'windows' => { 'service' => 'osqueryd' },
-      'default' => nil,
-    )
 
     service_type, service_name = service_info.first
     flag_file = ::File.join(osquery_dir, 'osquery.flags')
@@ -291,10 +293,16 @@ action_class do # rubocop:disable Metrics/BlockLength
 
   def debian_manage_service
     # Ensure osqueryd is running
-    cookbook_file '/usr/lib/systemd/system/osqueryd.service' do
-      source 'osqueryd.service.systemd'
+    service_type, service_name = service_info.first
+    template '/etc/default/osqueryd' do
+      source 'osqueryd.erb'
+      notifies :restart, "#{service_type}[#{service_name}]"
     end
-    service 'osqueryd.service' do
+    template '/usr/lib/systemd/system/osqueryd.service' do
+      source 'osqueryd.service.systemd.erb'
+      notifies :restart, "#{service_type}[#{service_name}]"
+    end
+    service service_name do
       action :start
     end
   end
@@ -337,7 +345,7 @@ action_class do # rubocop:disable Metrics/BlockLength
 
   def debian_uninstall
     # Ensure osqueryd is stopped
-    service 'osqueryd.service' do
+    service service_info.first[1] do
       action :stop
     end
     # Purge all traces of the package
@@ -347,6 +355,7 @@ action_class do # rubocop:disable Metrics/BlockLength
     # Clean up osquery directories the purge doesn't handle
     %w[
       /etc/osquery
+      /opt/osquery
       /usr/lib/osquery/
       /usr/share/osquery
       /var/osquery
@@ -354,6 +363,16 @@ action_class do # rubocop:disable Metrics/BlockLength
     ].each do |osquery_directory|
       directory osquery_directory do
         recursive true
+        action :delete
+      end
+    end
+
+    # Clean up osquery files the purge may not always clean up
+    %w[
+      /etc/default/osqueryd
+      /usr/lib/systemd/system/osqueryd.service
+    ].each do |osquery_file|
+      file osquery_file do
         action :delete
       end
     end

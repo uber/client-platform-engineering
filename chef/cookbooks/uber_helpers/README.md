@@ -8,6 +8,12 @@ This cookbook depends on the following cookbook:
 
 This cookbook is offered by Facebook in the [IT-CPE](https://github.com/facebook/IT-CPE) repository.
 
+This cookbook also depends on the following tools
+
+* [gnes](https://github.com/erikng/gnes)
+
+The cookbook will function without gnes being installed onto the system, but we have found bugs with the underlying code. Deploying gnes is outside of the function of this cookbook, but could be a simple recipe. An example will be provided below.
+
 Usage
 -----
 * node.at_least?
@@ -369,3 +375,26 @@ Usage
     do_other_thing
   end
   ```
+
+# Example of installing external dependencies
+Example of simple gnes deployment
+```
+gnes_receipt = 'com.github.erikng.gnes'
+gnes_version = '0.0.1.80648'
+
+# If gnes goes missing, either by accident or abuse, trigger re-install
+unless ::File.exist?('/usr/local/bin/gnes')
+  execute "/usr/sbin/pkgutil --forget #{gnes_receipt}" do
+    not_if { shell_out("/usr/sbin/pkgutil --pkg-info #{gnes_receipt}").error? }
+  end
+end
+
+cpe_remote_pkg 'gnes' do
+  app 'gnes'
+  pkg_name "gnes-#{gnes_version}"
+  allow_downgrade false
+  checksum 'ea6c09ee92d2611e8f38970ddeace7d51c322598fe470af31457f9355ad0d8d7'
+  receipt gnes_receipt
+  version gnes_version
+end
+```
