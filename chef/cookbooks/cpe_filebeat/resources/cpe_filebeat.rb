@@ -42,13 +42,12 @@ action_class do # rubocop:disable Metrics/BlockLength
     status = false
     if filebeat_exist?
       if macos? || debian?
-        cmd = shell_out('sudo /opt/filebeat/filebeat version').stdout
+        cmd = shell_out('/opt/filebeat/filebeat version').stdout
         status = cmd.include? zip_info['version']
         return status
       elsif windows?
-        powershell_cmd = "(Get-Item #{filebeat_bin}).VersionInfo.FileVersion"
-        cmd = powershell_out(powershell_cmd).stdout
-        status = cmd.include? zip_info['version']
+        cmd = powershell_out("(Get-Item #{filebeat_bin}).VersionInfo.FileVersion").stdout
+        status = cmd.include?(zip_info['version'])
         # Guarding false positive on older filebeat version
         if cmd.nil? || cmd.empty? && zip_info['version'].include?('6.4.2')
           status = true
@@ -74,19 +73,21 @@ action_class do # rubocop:disable Metrics/BlockLength
     zip_info.reject { |_k, v| v.nil? }
     return if zip_info.nil? || zip_info.empty?
 
-    # Delete the fielbeat cache containing any prior versions of filebeat
-    directory filebeat_cache do
-      recursive true
-      action :delete
-      not_if { current_version? }
-      ignore_failure true if windows?
+    # Self-remediation and repair logic
+    unhealthy_count = filebeat_unhealthy_count
+    reinstall_count = filebeat_reinstall_count
+    repair = false
+
+    filebeat_running? ? unhealthy_count = 0 : unhealthy_count += 1
+    if unhealthy_count > unhealthy_limit
+      unhealthy_count = 0
+      reinstall_count += 1
+      repair = true
     end
-    # Windows only stop the filebeat service to allow changes to be made
-    windows_service 'Filebeat Service' do
-      action :stop
-      only_if { windows? }
-      only_if { !current_version? }
-    end
+
+    # Reinstall if service is broken or needs an upgrade
+    cleanup if !current_version? || repair
+
     zip_name = value_for_platform_family(
       'mac_os_x' => "filebeat-#{zip_info['version']}-darwin-x86_64.zip",
       'debian' => "filebeat-#{zip_info['version']}-linux-x86_64.zip",
@@ -94,11 +95,7 @@ action_class do # rubocop:disable Metrics/BlockLength
       'default' => nil,
     )
     # Create the filebeat directory if it does not exist
-    directory filebeat_dir do
-      recursive true
-      owner root_owner
-      group node['root_group']
-    end
+    create_filebeat_directory
     # Extract the Filebeat files to the filebeat directory
     cpe_remote_zip 'filebeat_zip' do
       zip_name zip_name
@@ -114,20 +111,25 @@ action_class do # rubocop:disable Metrics/BlockLength
       only_if { macos? }
       only_if { !unix_binary? }
     end
+
+    # This will track the health history of the Filebeat service
+    set_filebeat_health_history(unhealthy_count, reinstall_count)
   end
 
   def configure
     # Get info about filebeat config, rejecting unset values
-    filebeat_conf = node['cpe_filebeat']['config'].to_h.reject { |_k, v| v.nil? }
     if filebeat_conf.empty? || filebeat_conf.nil?
       Chef::Log.warn('config is not populated, skipping configuration')
       return
     end
 
-    directory filebeat_dir do
-      recursive true
+    # Place certificate if it does not exist
+    cookbook_file certificate_path do
+      source certificate
       owner root_owner
       group node['root_group']
+      mode '0644' unless windows?
+      not_if { certificate.nil? }
     end
 
     setup_macos_service if macos?
@@ -220,6 +222,14 @@ action_class do # rubocop:disable Metrics/BlockLength
     node.default['cpe_launchd']['filebeat'] = ld
   end
 
+  def create_filebeat_directory
+    directory filebeat_dir do
+      recursive true
+      owner root_owner
+      group node['root_group']
+    end
+  end
+
   def cleanup_windows
     windows_service 'Filebeat Service' do
       action %i[stop delete]
@@ -233,6 +243,13 @@ action_class do # rubocop:disable Metrics/BlockLength
   end
 
   def cleanup
+    # Delete the filebeat cache containing any prior versions of filebeat
+    directory filebeat_cache do
+      recursive true
+      action :delete
+      ignore_failure true if windows?
+    end
+
     cleanup_debian if debian?
     cleanup_windows if windows?
 
@@ -247,6 +264,17 @@ action_class do # rubocop:disable Metrics/BlockLength
     node['cpe_filebeat']['dir']
   end
 
+  def filebeat_running?
+    if windows?
+      status = powershell_out('(Get-Service "Filebeat Service" -ErrorAction SilentlyContinue).Status').stdout.to_s.chomp
+      node.safe_nil_empty?(status) ? false : status&.include?('Running')
+    elsif macos?
+      node.daemon_running?('filebeat')
+    else
+      shell_out('systemctl status filebeat').run_command.stdout.to_s[/Active: active \(running\)/].nil? ? false : true
+    end
+  end
+
   def filebeat_bin
     ::File.join(filebeat_dir, node['cpe_filebeat']['bin'])
   end
@@ -259,7 +287,53 @@ action_class do # rubocop:disable Metrics/BlockLength
     end
   end
 
+  def filebeat_unhealthy_count
+    get_filebeat_health_history['unhealthy_count']
+  end
+
+  def filebeat_reinstall_count
+    get_filebeat_health_history['reinstall_count']
+  end
+
+  def get_filebeat_health_history
+    json_path = ::File.join(filebeat_dir, 'cpe_filebeat.json')
+    valid = false
+    if ::File.exists?(json_path)
+      json = node.parse_json(json_path)
+      valid = %w(unhealthy_count reinstall_count).all? { |k| json.key?(k) && json[k].is_a?(Integer) }
+    end
+    valid ? json : { 'unhealthy_count' => 0, 'reinstall_count' => 0 }
+  end
+
+  def set_filebeat_health_history(unhealthy = 0, reinstalls = 0)
+    json_path = ::File.join(filebeat_dir, 'cpe_filebeat.json')
+    history = {
+      'unhealthy_count' => unhealthy,
+      'reinstall_count' => reinstalls,
+    }
+    file json_path do
+      action :create
+      content Chef::JSONCompat.to_json_pretty(history)
+    end
+  end
+
   def zip_info
     node['cpe_filebeat']['zip_info'][node['platform_family']]
+  end
+
+  def unhealthy_limit
+    node['cpe_filebeat']['unhealthy_limit']
+  end
+
+  def certificate
+    node['cpe_filebeat']['certificate']
+  end
+
+  def certificate_path
+    ::File.join(node['cpe_filebeat']['dir'], certificate) if certificate
+  end
+
+  def filebeat_conf
+    node['cpe_filebeat']['config'].to_h.reject { |_k, v| v.nil? }
   end
 end

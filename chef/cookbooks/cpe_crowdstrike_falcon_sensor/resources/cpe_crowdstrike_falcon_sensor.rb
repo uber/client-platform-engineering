@@ -316,26 +316,31 @@ action_class do # rubocop:disable Metrics/BlockLength
       end
 
       # Enable or Disable the network filter if being managed - OS >= Big Sur
-      if falconctl_healthy? && falcon_agent_prefs['manage_network_filter']
+      if falconctl_healthy? &&
+        falcon_agent_prefs['manage_network_filter'] &&
+        node.at_least?(node.chef_version, '17.7.22')
+        ext_enabled, ext_error = node.network_extension_enabled('com.crowdstrike.falcon.App', 'contentFilter')
         if falcon_agent_prefs['enable_network_filter']
           execute 'Enable Crowdstrike network filter' do
             command "#{falconctl_path} enable-filter"
-            only_if { node.at_least?(node.chef_version, '17.7.22') }
-            only_if { node.network_extension_enabled?('com.crowdstrike.falcon.App') == false }
+            not_if { ext_error }
+            only_if { ext_enabled == false }
           end
         else
           execute 'Disable Crowdstrike network filter' do
             command "#{falconctl_path} disable-filter"
-            only_if { node.at_least?(node.chef_version, '17.7.22') }
-            only_if { node.network_extension_enabled?('com.crowdstrike.falcon.App') }
+            not_if { ext_error }
+            only_if { ext_enabled }
           end
         end
       end
     end
 
     # Grouping Tags
-    grouping_tags = node['cpe_crowdstrike_falcon_sensor']['grouping_tags']
-    node.safe_nil_empty?(grouping_tags) ? clear_grouping_tags : append_grouping_tags(grouping_tags)
+    if Gem::Version.new(falcon_pkg_prefs['version']) >= Gem::Version.new('6.0.0.0')
+      grouping_tags = node['cpe_crowdstrike_falcon_sensor']['grouping_tags']
+      node.safe_nil_empty?(grouping_tags) ? clear_grouping_tags : append_grouping_tags(grouping_tags)
+    end
   end
 
   # returns an array of existing grouping tags.
@@ -418,8 +423,10 @@ action_class do # rubocop:disable Metrics/BlockLength
 
   def windows_manage
     # Grouping Tags
-    grouping_tags = node['cpe_crowdstrike_falcon_sensor']['grouping_tags']
-    node.safe_nil_empty?(grouping_tags) ? clear_grouping_tags : append_grouping_tags(grouping_tags)
+    if Gem::Version.new(falcon_pkg_prefs['version']) >= Gem::Version.new('6.0.0.0')
+      grouping_tags = node['cpe_crowdstrike_falcon_sensor']['grouping_tags']
+      node.safe_nil_empty?(grouping_tags) ? clear_grouping_tags : append_grouping_tags(grouping_tags)
+    end
   end
 
   def uninstall
@@ -576,11 +583,23 @@ action_class do # rubocop:disable Metrics/BlockLength
   def falconctl_healthy?(falconctl_path = falcon_agent_prefs['falconctl_path'])
     status = false
     if macos?
-      cmd = shell_out("#{falconctl_path} stats")
-      if cmd.nil?
-        return status
+      if node.catalina? || node.mojave?
+        cmd = shell_out("#{falconctl_path} stats")
+        status = cmd.nil? ? false : cmd.exitstatus.zero?
       else
-        status = cmd.exitstatus.zero?
+        cmd = shell_out("#{falconctl_path} stats agent_info --plist").stdout
+        if cmd.nil? || cmd.empty?
+          return false
+        else
+          cmd_plist = Plist.parse_xml(cmd)
+        end
+        if cmd_plist.nil? || cmd_plist.empty?
+          return false
+        else
+          sensor_operational = cmd_plist['agent_info']['sensor_operational']
+        end
+
+        status = sensor_operational.nil? ? false : sensor_operational.downcase == 'true'
       end
     end
     status

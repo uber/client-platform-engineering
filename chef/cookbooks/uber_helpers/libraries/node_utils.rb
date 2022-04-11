@@ -37,14 +37,12 @@ class Chef
       if profiles.key?('_computerlevel')
         profiles['_computerlevel'].each do |profile|
           # Only check for kextid if the profile is installed.
-          if profile['ProfileIdentifier'] == profileid
-            # Two methods to do here. Explicitly look at the array or convert
-            # to string.
-            # Array would be profile['ProfileItems'][0]['PayloadContent']\
-            # ['AllowedTeamIdentifiers'].include?(kextid)
-            # Opting for the string since it's less likely to fail.
-            return true if profile.to_s.include?(kextid)
-          end
+          return true if profile['ProfileIdentifier'] == profileid && profile.to_s.include?(kextid)
+          # Two methods to do here. Explicitly look at the array or convert
+          # to string.
+          # Array would be profile['ProfileItems'][0]['PayloadContent']\
+          # ['AllowedTeamIdentifiers'].include?(kextid)
+          # Opting for the string since it's less likely to fail.
         end
       end
       false
@@ -77,10 +75,7 @@ class Chef
 
       if profiles.key?('_computerlevel')
         profiles['_computerlevel'].each do |profile|
-          if profile['ProfileIdentifier'] == profile_identifier
-            # Convert the entire hash of the profile to a string.
-            return true if profile.to_s.include?(profile_content)
-          end
+          return true if profile['ProfileIdentifier'] == profile_identifier && profile.to_s.include?(profile_content)
         end
       end
       false
@@ -254,7 +249,7 @@ class Chef
     end
 
     def logged_in_user
-      unless debian?
+      unless debian_family?
         Chef::Log.warn('node.logged_in_user called on non-Debian!')
         return
       end
@@ -454,7 +449,7 @@ class Chef
     end
 
     def debian_min_package_installed?(pkg_identifier, pkg_version)
-      unless debian?
+      unless debian_family?
         Chef::Log.warn('node.debian_package_installed? called on non-Debian system!')
         false
       end
@@ -520,7 +515,7 @@ class Chef
     end
 
     def cros?
-      unless debian?
+      unless debian_family?
         Chef::Log.warn('node.cros? called on non debian!')
         return
       end
@@ -610,14 +605,14 @@ class Chef
     end
 
     def connection_reachable?(destination)
-      unless macos? || windows? || debian?
+      unless macos? || windows? || debian_family?
         Chef::Log.warn('node.connection_reachable? called on non-macOS/windows/ubuntu device!')
         return false
       end
       status = false
       if macos?
         cmd = shell_out("/sbin/ping #{destination} -c 1")
-      elsif debian?
+      elsif debian_family?
         cmd = shell_out("/bin/ping #{destination} -c 2")
       elsif windows?
         powershell_cmd = "Test-Connection #{destination} -Count 1 -Quiet"
@@ -625,7 +620,7 @@ class Chef
       end
       if cmd.stdout.nil? || cmd.stdout.empty?
         return status
-      elsif macos? || debian?
+      elsif macos? || debian_family?
         # If connected, will return 0, timeout is 68.
         status = cmd.exitstatus.zero?
       elsif windows?
@@ -734,29 +729,62 @@ class Chef
       return status
     end
 
-    def network_extension_enabled?(extension_identifier)
+    # function returns an array of bools [ bool, bool ]
+    # first element is to indicate if the extension queried is enabled/disabled
+    # second element is to indicate if there was an error in the begin/rescue block
+    def network_extension_enabled(extension_identifier, type)
       extension_enabled = false
-      unless node.at_least?(node.chef_version, '17.7.22')
-        Chef::Log.warn('node.network_extension_enabled? requires chef v17.7.22 and higher!')
-        return extension_enabled
-      end
       unless macos?
         Chef::Log.warn('node.network_extension_enabled? called on non-OS X!')
-        return extension_enabled
+        return false, true
       end
-      # Everything is in a key of "$objects"
-      network_extensions = CF::Preferences.get('$objects', 'com.apple.networkextension')
-      # Apple uses an array of dictionaries but also puts a string or strings before some of
-      # the dictionaries to denote what tool it's configuration is, rather than use something sane like <key>.
-      # This condition grabs the current index, substracts one and compares it to the previous item in the array.
-      # It checks to see if the previous entry was the requested bundle ID and also that the value returned is not a
-      # string as Apple also has multiple string entries over and over in the array, which is not the data we need.
-      network_extensions.each_with_index do |value, index|
-        if network_extensions[index - 1] == extension_identifier && !value.instance_of?(String)
-          return value['Enabled'] # "Enabled" key to understand if the content filter is currently running
+
+      extension_enabled = false
+      extension_error = false
+
+      gnes_path = '/usr/local/bin/gnes'
+
+      if ::File.exist?(gnes_path)
+        cmd = shell_out("#{gnes_path} -identifier #{extension_identifier} -type #{type} -stdout-json")
+        if cmd.exitstatus.zero?
+          begin
+            cmd_json = Chef::JSONCompat.parse(cmd.stdout.to_s)
+            extension_enabled = cmd_json.nil? ? false : cmd_json['enabled']
+          rescue Chef::Exceptions::JSON::ParseError, FFI_Yajl::ParseError
+            extension_error = true
+            Chef::Log.warn('node.network_extension_enabled threw an error')
+          end
+        else
+          extension_error = true
+          Chef::Log.warn('node.network_extension_enabled could not find extension with requested type')
+        end
+      else
+        Chef::Log.info('node.network_extension_enabled could not find gnes binary - reverting to legacy check')
+        unless node.at_least?(node.chef_version, '17.7.22')
+          Chef::Log.warn('node.network_extension_enabled? requires chef v17.7.22 and higher when using legacy check')
+          return false, true
+        end
+        # Everything is in a key of "$objects"
+        begin
+          network_extensions = CF::Preferences.get('$objects', 'com.apple.networkextension')
+        rescue TypeError
+          network_extensions = []
+          extension_error = true
+          Chef::Log.warn('node.network_extension_enabled threw an error')
+        end
+        # Apple uses an array of dictionaries but also puts a string or strings before some of
+        # the dictionaries to denote what tool it's configuration is, rather than use something sane like <key>.
+        # This condition grabs the current index, substracts one and compares it to the previous item in the array.
+        # It checks to see if the previous entry was the requested bundle ID and also that the value returned is not a
+        # string as Apple also has multiple string entries over and over in the array, which is not the data we need.
+        network_extensions.each_with_index do |value, index|
+          if network_extensions[index - 1] == extension_identifier && !value.instance_of?(String)
+            extension_enabled = value['Enabled']
+            break
+          end
         end
       end
-      return extension_enabled
+      return extension_enabled, extension_error
     end
 
     def system_extension_installed?(extension_identifier)
@@ -916,13 +944,18 @@ class Chef
       time = shell_out('/bin/ps acxo etime,command').run_command.stdout.to_s[/(.*) #{process}/, 1]
       unless time.nil?
         safe_time = time.strip.split(':')
-        if safe_time.count == 3
+        case safe_time.count
+        when 3
           uptime = safe_time[0].to_i * 360 + safe_time[1].to_i * 60 + safe_time[2].to_i
-        elsif safe_time.count == 2
+        when 2
           uptime = safe_time[0].to_i * 60 + safe_time[1].to_i
         end
       end
       uptime
+    end
+
+    def safe_nil_empty?(object)
+      object.nil? || object.empty?
     end
   end
 end

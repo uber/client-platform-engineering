@@ -44,4 +44,6 @@ default['cpe_filebeat'] = {
   },
   'configure' => false,
   'config' => {},
+  'certificate' => nil,
+  'unhealthy_limit' => 3,
 }
