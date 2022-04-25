@@ -118,6 +118,7 @@ action_class do # rubocop:disable Metrics/BlockLength
       frequency_modifier node['cpe_gorilla']['task']['minutes_per_run']
       run_level :highest
       only_if { node['cpe_gorilla']['task']['create_task'] }
+      action [:create, :enable]
     end
 
     windows_task "#{node['cpe_gorilla']['exe']['name']}-onlogon" do
@@ -130,6 +131,7 @@ action_class do # rubocop:disable Metrics/BlockLength
     windows_path bin_dir do
       action :add
     end
+  
   end
 
   def remove
