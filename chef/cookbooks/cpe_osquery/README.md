@@ -83,7 +83,53 @@ node.default['cpe_osquery']['options'] = {
   'worker_threads' => 4,
 }
 ```
-You are responsible for placing the any custom extensions. You will want to do this via a cookbook_file cpe_remote_file, package or whatever makes sense in your deployment. Here is an example of what this might look like:
+
+To deploy extensions, you would do something like the following:
+```
+if debian?
+  node.default['cpe_osquery']['extensions']['macadmins'] = {
+    'checksum' => '4836a25fbc3ab3153464f09d07da14a622fd264aa7e3f764c1788cf29b6ec348',
+    'version' => '0.0.7',
+  }
+elsif macos?
+  node.default['cpe_osquery']['extensions']['macadmins'] = {
+    'checksum' => 'e84910046705f98dc7a30c5ffce033d1eebfb3ee4c9334a01dc869f5fbab79f5',
+    'version' => '0.0.7',
+  }
+elsif windows?
+  node.default['cpe_osquery']['extensions']['macadmins'] = {
+    'checksum' => '0429e50ac58f7467be11c078f624aa12dfbadc4fba0cf13a39b3bd006643a9b8',
+    'version' => '0.0.7',
+  }
+end
+```
+
+cpe_osquery will use some opinionated paths and there is an expectation that your extensions url will follow a specific format
+
+```
+ls -1 /cdn/osquery
+extensions/
+osquery-5.2.2.deb
+osquery-5.2.2.msi
+osquery-5.2.2.pkg
+
+ls -1 /cdn/osquery/extensions
+debian/
+mac_os_x/
+windows/
+
+ls -1 /cdn/osquery/extensions/debian
+macadmins-0.0.7
+
+ls -1 /cdn/osquery/extensions/mac_os_x
+macadmins-0.0.7
+
+ls -1 /cdn/osquery/extensions/windows
+macadmins-0.0.7
+```
+
+Extensions will be installed as `.ext` for debian and linux and `.exe` for windows
+
 
 ```
 ## Set service_name so we can notify it for a delayed restart on change

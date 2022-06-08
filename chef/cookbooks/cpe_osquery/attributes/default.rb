@@ -24,16 +24,24 @@ osquery_dir = value_for_platform_family(
   'default' => nil,
 )
 
+osquery_ext_dir = value_for_platform_family(
+  'windows' => 'C:\Program Files\osquery\extensions',
+  'debian' => '/private/var/osquery/extensions',
+  'mac_os_x' => '/var/osquery/extensions',
+  'default' => nil,
+)
+
 default['cpe_osquery'] = {
   'base_bin_path' => base_bin_path,
   'conf' => {},
-  'extensions' => [],
+  'extensions' => {},
   'install' => false,
   'manage' => false,
   'manage_official_packs' => false,
   'official_packs_install_list' => [],
   'options' => {},
   'osquery_dir' => osquery_dir,
+  'osquery_ext_dir' => osquery_ext_dir,
   'packs' => {},
   'pkg' => {
     'name' => nil,

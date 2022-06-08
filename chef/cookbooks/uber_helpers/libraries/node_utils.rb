@@ -48,6 +48,26 @@ class Chef
       false
     end
 
+    ## Looks for a team id within the profileidentifier specified
+    def _parse_sext_profile_removal(profileid, kextid, teamid, profiles)
+      fail 'profiles XML parsing cannot be nil!' if profiles.nil?
+      fail 'profiles XML parsing must be a Hash!' unless profiles.is_a?(Hash)
+
+      if profiles.key?('_computerlevel')
+        profiles['_computerlevel'].each do |profile|
+          if profile['ProfileIdentifier'] == profileid
+            removable_extensions = profile['ProfileItems'][0]['PayloadContent']['RemovableSystemExtensions']
+            unless removable_extensions&.nil?
+              removable_extensions.each do |key, value|
+                return true if key == teamid && value.to_s.include?(kextid)
+              end
+            end
+          end
+        end
+      end
+      false
+    end
+
     ## Will match any top level keys on a profile
     # term is the term to match against
     # key is what key to match (ProfileIdentifier, ProfileDisplayName, etc)
@@ -188,6 +208,15 @@ class Chef
       (node.os_at_least?('10.17') && node.os_less_than?('10.18'))
     end
 
+    def ventura?
+      unless macos?
+        Chef::Log.warn('node.ventura? called on non-macOS!')
+        return
+      end
+      return node.os_at_least?('13.0') && node.os_less_than?('14.0') || \
+      (node.os_at_least?('10.18') && node.os_less_than?('10.19'))
+    end
+
     def date_at_least?(date)
       Date.today >= Date.parse(date)
     end
@@ -241,7 +270,18 @@ class Chef
       unless macos?
         Chef::Log.warn('node.kext_profile_contains_teamid called on non-macOS!')
       end
+      return false if profileid.nil?
+
       node._parse_kext_profile(profileid, kextid, _config_profiles)
+    end
+
+    def sext_profile_removal_contains_extension?(sextid, teamid, profileid)
+      unless macos?
+        Chef::Log.warn('node.sext_profile_removal_contains_extension called on non-macOS!')
+      end
+      return false if profileid.nil?
+
+      node._parse_sext_profile_removal(profileid, sextid, teamid, _config_profiles)
     end
 
     def less_than?(version1, version2)
@@ -648,6 +688,20 @@ class Chef
         end
     end
 
+    def orbit_token
+      unless macos?
+        return nil
+      end
+
+      orbit_token_path = '/opt/orbit/identifier'
+
+      if ::File.exists?(orbit_token_path)
+        return ::File.read(orbit_token_path)
+      else
+        return nil
+      end
+    end
+
     def macos_mutate_version(version)
       # This is stupid, but it works from 10.7 and higher (to date), so this is
       # _likely_ safe.
@@ -935,6 +989,17 @@ class Chef
       shell_out('/usr/sbin/sysctl -n kern.waketime').run_command.stdout.to_s[/sec = (.*),/, 1].to_i
     end
 
+    def macos_kext_loaded?(bundle_identifier)
+      unless macos?
+        Chef::Log.warn('node.macos_kext_loaded? called on non-macOS!')
+        return false
+      end
+      shell_out(
+        "/usr/bin/kmutil showloaded --show loaded --filter \"\'CFBundleIdentifier\' == \'#{bundle_identifier}\'\" "\
+        '--variant-suffix release --list-only',
+      ).run_command.stdout.to_s.include?(bundle_identifier)
+    end
+
     def macos_process_uptime(process)
       uptime = 0
       unless macos?
@@ -956,6 +1021,29 @@ class Chef
 
     def safe_nil_empty?(object)
       object.nil? || object.empty?
+    end
+
+    def cpe_launchd_label(cpe_identifier)
+      # This portion is taken from cpe_launchd. Since we use cpe_launchd to
+      # create our launch agent, the label specified in the attributes will not
+      # match the actual label/path that's created. Doing this will result in
+      # the right file being targeted.
+      if cpe_identifier.start_with?('com')
+        name = cpe_identifier.split('.')
+        name.delete('com')
+        identifier = name.join('.')
+        identifier = "#{node['cpe_launchd']['prefix']}.#{identifier}"
+      end
+      identifier
+    end
+
+    def cpe_launchd_path(type, identifier)
+      label = cpe_launchd_label(identifier)
+      if type == 'agent'
+        ::File.join('/Library/LaunchAgents', "#{label}.plist")
+      else
+        ::File.join('/Library/LaunchDaemons', "#{label}.plist")
+      end
     end
   end
 end

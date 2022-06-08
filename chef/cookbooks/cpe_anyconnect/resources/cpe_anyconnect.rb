@@ -51,8 +51,6 @@ action_class do # rubocop:disable Metrics/BlockLength
     # Create the cache directories and stage necessary files
     create_anyconnect_cache
     sync_anyconnect_cache
-    # package properties
-    pkg = node['cpe_anyconnect']['pkg']
 
     # cpe_remote_pkg doesn't support ChoiceChanges.xml which is needed to not install specific parts of this package
     # Download the anyconnect pkg
@@ -62,15 +60,32 @@ action_class do # rubocop:disable Metrics/BlockLength
     cc_xml_path = ::File.join(anyconnect_root_cache_path, 'pkg', 'ChoiceChanges.xml')
     allow_downgrade = pkg['allow_downgrade']
     if allow_downgrade
-      Chef::Log.warn('cpe_anyconnect - AnyConnect package has logic to fail if attempting to downgrade - you must '\
-        'uninstall the application first!')
-      Chef::Log.warn('cpe_anyconnect - forcing downgrade to false')
-      allow_downgrade = False
+      if node.os_at_least?('12.0') && node.sext_profile_removal_contains_extension?(
+        'com.cisco.anyconnect.macos.acsockext', 'DE8Y96K9QP', node['cpe_anyconnect']['profile_identifier']
+      )
+        execute '/opt/cisco/anyconnect/bin/anyconnect_uninstall.sh' do
+          not_if { node.macos_package_installed?(pkg['receipt'], pkg['version']) }
+          not_if { anyconnect_vpn_connected? }
+          only_if { ::File.exist?('/opt/cisco/anyconnect/bin/anyconnect_uninstall.sh') }
+        end
+        execute '/opt/cisco/anyconnect/bin/dart_uninstall.sh' do
+          not_if { node.macos_package_installed?(pkg['dart_receipt'], pkg['version']) }
+          not_if { anyconnect_vpn_connected? }
+          only_if { ::File.exist?('/opt/cisco/anyconnect/bin/dart_uninstall.sh') }
+        end
+      else
+        Chef::Log.warn('cpe_anyconnect - AnyConnect package has logic to fail if attempting to downgrade - you must '\
+          'manually uninstall the application first if you are not passing a system extension profile!')
+        Chef::Log.warn('cpe_anyconnect - forcing downgrade to false')
+        allow_downgrade = false
+      end
     end
 
     execute "/usr/sbin/installer -applyChoiceChangesXML #{cc_xml_path} -pkg #{pkg_path(pkg)} -target /" do
       # functionally equivalent to allow_downgrade false on cpe_remote_pkg
-      unless allow_downgrade
+      if allow_downgrade
+        not_if { node.macos_package_installed?(pkg['receipt'], pkg['version']) }
+      else
         not_if { node.macos_min_package_installed?(pkg['receipt'], pkg['version']) }
       end
       not_if { anyconnect_vpn_connected? }
@@ -142,7 +157,7 @@ action_class do # rubocop:disable Metrics/BlockLength
 
   def macos_manage
     # If the Anyconnect App goes missing, either by accident or abuse, trigger re-install
-    ac_receipt = node['cpe_anyconnect']['pkg']['receipt']
+    ac_receipt = pkg['receipt']
     orgid = node['cpe_anyconnect']['organization_id']
     unless ::Dir.exist?(node['cpe_anyconnect']['app_path'])
       execute "/usr/sbin/pkgutil --forget #{ac_receipt}" do
@@ -258,8 +273,13 @@ action_class do # rubocop:disable Metrics/BlockLength
   end
 
   def macos_uninstall
-    # TODO: need to write
-    return
+    execute '/opt/cisco/anyconnect/bin/anyconnect_uninstall.sh' do
+      only_if { ::File.exist?('/opt/cisco/anyconnect/bin/anyconnect_uninstall.sh') }
+    end
+
+    execute '/opt/cisco/anyconnect/bin/dart_uninstall.sh' do
+      only_if { ::File.exist?('/opt/cisco/anyconnect/bin/dart_uninstall.sh') }
+    end
   end
 
   def windows_uninstall
@@ -304,12 +324,16 @@ action_class do # rubocop:disable Metrics/BlockLength
     remove_desktop_link
   end
 
+  def pkg
+    node['cpe_anyconnect']['pkg'].to_hash
+  end
+
   def cache_path
-    node['cpe_anyconnect']['pkg']['cache_path']
+    pkg['cache_path']
   end
 
   def app_name
-    node['cpe_anyconnect']['pkg']['app_name']
+    pkg['app_name']
   end
 
   def anyconnect_root_cache_path

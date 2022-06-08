@@ -28,7 +28,6 @@ default['cpe_crowdstrike_falcon_sensor'] = {
     'version' => nil,
     'args' => {
       'vdi' => false,
-      'metered' => false,
       'no_start' => false,
       'prov_no_wait' => false,
     },

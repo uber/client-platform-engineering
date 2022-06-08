@@ -37,6 +37,7 @@ Attributes
 * node['cpe_anyconnect']['pkg']['checksum']
 * node['cpe_anyconnect']['pkg']['receipt']
 * node['cpe_anyconnect']['pkg']['version']
+* node['cpe_anyconnect']['profile_identifier']
 * node['cpe_anyconnect']['umbrella_diagnostic_link']
 * node['cpe_anyconnect']['uninstall']
 

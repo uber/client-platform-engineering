@@ -202,7 +202,6 @@ action_class do # rubocop:disable Metrics/BlockLength
     exe_path = ::File.join(Chef::Config[:file_cache_path], file_name)
     install_string = "#{exe_path} /install /quiet /norestart CID=#{reg_token}"
     install_string += ' VDI=1' if install_args['vdi']
-    install_string += ' BILLINGTYPE=Metered' if install_args['metered']
     install_string += ' NO_START=1' if install_args['no_start']
     # ProvNoWait=1 means it doesn't wait until it can communicate to CS servers to install itself.
     install_string += ' ProvNoWait=1' if install_args['prov_no_wait']
@@ -349,6 +348,7 @@ action_class do # rubocop:disable Metrics/BlockLength
       command = "#{falconctl_path} grouping-tags get"
       command_out = shell_out(command)
       command_tokenize = command_out.stdout.strip.split(': ')
+      return [] if node.safe_nil_empty?(command_tokenize)
       return [] if command_tokenize[0].include?('No grouping tags set')
 
       return command_tokenize.last.split(',') unless command_tokenize.empty? && command_tokenize.length > 1
