@@ -35,6 +35,7 @@ default['cpe_anyconnect'] = {
     'checksum' => nil,
     'version' => nil,
   },
+  'profile_identifier' => nil,
   'umbrella_diagnostic_link' => nil,
   'uninstall' => false,
 }
@@ -43,5 +44,6 @@ case node['platform_family']
 when 'mac_os_x'
   default['cpe_anyconnect']['app_path'] =
     '/Applications/Cisco/Cisco AnyConnect Secure Mobility Client.app'
+  default['cpe_anyconnect']['pkg']['dart_receipt'] = 'com.cisco.pkg.anyconnect.dart'
   default['cpe_anyconnect']['pkg']['receipt'] = 'com.cisco.pkg.anyconnect.vpn'
 end

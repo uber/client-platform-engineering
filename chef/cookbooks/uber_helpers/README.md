@@ -334,6 +334,17 @@ Usage
   end
   ```
 
+  * node.ventura?
+  Returns a boolean value stating whether macOS is running a version of 13.0
+
+  ```
+  if node.ventura?
+    do_thing
+  else
+    do_other_thing
+  end
+  ```
+
 * node.write_contents_to_file
   Helper function to write contents to a file
 

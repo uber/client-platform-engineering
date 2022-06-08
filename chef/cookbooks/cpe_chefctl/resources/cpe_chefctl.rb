@@ -72,11 +72,6 @@ action_class do
         'config' => conf,
       )
     end
-    chefctl_bat = 'chefctl.bat'
-    template ::File.join('C:\opscode\chef\bin', chefctl_bat) do
-      only_if { windows? }
-      source "#{chefctl_bat}.erb"
-    end
   end
 
   def remove

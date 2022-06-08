@@ -37,7 +37,6 @@ Attributes
 * node['cpe_crowdstrike_falcon_sensor']['pkg']['uninstall_version']
 * node['cpe_crowdstrike_falcon_sensor']['pkg']['version']
 * node['cpe_crowdstrike_falcon_sensor']['pkg']['args']['vdi']
-* node['cpe_crowdstrike_falcon_sensor']['pkg']['args']['metered']
 * node['cpe_crowdstrike_falcon_sensor']['pkg']['args']['no_start']
 * node['cpe_crowdstrike_falcon_sensor']['pkg']['args']['prov_no_wait']
 * node['cpe_crowdstrike_falcon_sensor']['uninstall']

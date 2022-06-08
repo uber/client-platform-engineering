@@ -171,25 +171,56 @@ action_class do # rubocop:disable Metrics/BlockLength
     end
 
     service_type, service_name = service_info.first
-    flag_file = ::File.join(osquery_dir, 'osquery.flags')
-    options = node['cpe_osquery']['options'].compact
+    # We need to make this mutable to inject values into it for extensions
+    options = node['cpe_osquery']['options'].to_hash
+
+    ext_file = ::File.join(osquery_dir, 'extensions.load')
+    extensions = node['cpe_osquery']['extensions']
+    extension_paths = []
+    unless extensions.empty?
+      options['extensions_autoload'] = ext_file
+      directory osquery_ext_dir do
+        recursive true
+        unless windows?
+          mode '0755'
+          owner root_owner
+          group node['root_group']
+        end
+      end
+      extensions.each do |name, values|
+        ext_extension = windows? ? 'exe' : 'ext'
+        ext_path = ::File.join(osquery_ext_dir, "#{name}.#{ext_extension}")
+        extension_paths << ext_path
+        cpe_remote_file "#{name}-#{values['version']}" do
+          file_name "#{name}-#{values['version']}"
+          folder_name "osquery/extensions/#{node['platform_family']}"
+          checksum values['checksum']
+          path ext_path
+          unless windows?
+            mode '0755'
+            owner root_owner
+            group node['root_group']
+          end
+          notifies :restart, "#{service_type}[#{service_name}]"
+        end
+      end
+      template ext_file do
+        source 'extensions.load.erb'
+        variables(
+          'extensions' => extension_paths,
+        )
+        notifies :restart, "#{service_type}[#{service_name}]"
+      end
+    end
+
     # Lay down config via osquery flags file
+    flag_file = ::File.join(osquery_dir, 'osquery.flags')
     template flag_file do
       source 'osquery.flags.erb'
       variables(
         'options' => options,
       )
       not_if { options.nil? }
-      notifies :restart, "#{service_type}[#{service_name}]"
-    end
-    ext_file = ::File.join(osquery_dir, 'extensions.load')
-    extensions = node['cpe_osquery']['extensions'].reject(&:nil?)
-    template ext_file do
-      source 'extensions.load.erb'
-      variables(
-        'extensions' => extensions,
-      )
-      not_if { extensions.nil? }
       notifies :restart, "#{service_type}[#{service_name}]"
     end
 
@@ -514,6 +545,10 @@ action_class do # rubocop:disable Metrics/BlockLength
 
   def osquery_dir
     node['cpe_osquery']['osquery_dir']
+  end
+
+  def osquery_ext_dir
+    node['cpe_osquery']['osquery_ext_dir']
   end
 
   def pkg_filename
