@@ -1,11 +1,12 @@
 Chef API Cookbook Repos
 --
 
-* [Facebook](https://github.com/facebook/IT-CPE/tree/master/chef/cookbooks)
+* [Facebook](https://github.com/facebook/IT-CPE/tree/main/itchef/cookbooks)
+* [Gusto](https://github.com/Gusto/it-cpe-opensource/tree/main/chef)
 * [Pinterest](https://github.com/pinterest/it-cpe-cookbooks)
-* [Uber](https://github.com/uber/cpe-chef-cookbooks)
+* [Uber](https://github.com/uber/client-platform-engineering)
 
-Opensource Projects
+Open source Projects
 --
 * [Crypt](https://github.com/grahamgilbert/crypt)
 * [Crypt-Server](https://github.com/grahamgilbert/Crypt-Server)
