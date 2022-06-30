@@ -1,149 +1,160 @@
+require:
+  - rubocop-performance
+
 #
 # Disabled rules
 #
 
-Encoding:
+## Layout
+# Seems buggy - https://github.com/bbatsov/rubocop/issues/2690
+Layout/MultilineOperationIndentation:
   Enabled: false
 
-NumericLiterals:
+## Lint
+# it wants File.exist? instead of File.exists?
+Lint/DeprecatedClassMethods:
   Enabled: false
 
-MultilineTernaryOperator:
-  Enabled: false
-
-ModuleLength:
-  Enabled: false
-
-MethodLength:
-  Enabled: false
-
-ClassLength:
-  Enabled: false
-
-CyclomaticComplexity:
-  Enabled: false
-
-# So just keep iterating instead of breaking? wtf.
-Next:
-  Enabled: false
-
-# While this can be nice, it also can promote errors. Let people
-# use what's comfortable for them
-GuardClause:
-  Enabled: false
-
-AbcSize:
-  Enabled: false
-
-# less readable, not more
-IfUnlessModifier:
-  Enabled: false
-
-# Really?
-PerlBackrefs:
+## Metrics
+Metrics/AbcSize:
   Enabled: false
 
 # Unrealistic
-BlockNesting:
+Metrics/BlockNesting:
   Enabled: false
 
-# Disabled because of the way 'variables' works.
-BracesAroundHashParameters:
+Metrics/ClassLength:
   Enabled: false
 
-WordArray:
+Metrics/CyclomaticComplexity:
   Enabled: false
 
-RedundantReturn:
+Metrics/MethodLength:
   Enabled: false
 
-RedundantSelf:
-  Enabled: false
-
-CommentAnnotation:
-  Enabled: false
-
-# this trips on *any* method called 'get_*' wtf.
-AccessorMethodName:
-  Enabled: false
-
-# backslash is extra dumb in ruby, we want the OPPOSITE of this rule
-LineEndConcatenation:
-  Enabled: false
-
-# this isn't testing for consistency it always wants %w() which is dumb
-PercentLiteralDelimiters:
-  Enabled: false
-
-# it wants File.exist? instead of File.exists?
-DeprecatedClassMethods:
-  Enabled: false
-
-# This blows up on things like base_packages-redhat
-FileName:
+Metrics/ModuleLength:
   Enabled: false
 
 # I don't know what it's metric for "human complexity" is, but it's wrong.
-PerceivedComplexity:
+Metrics/PerceivedComplexity:
   Enabled: false
 
-# Seems buggy - https://github.com/bbatsov/rubocop/issues/2690
-MultilineOperationIndentation:
+## Naming
+
+# this trips on *any* method called 'get_*' wtf.
+Naming/AccessorMethodName:
   Enabled: false
+
+# This blows up on things like base_packages-redhat
+Naming/FileName:
+  Enabled: false
+
+## Performance
+# Performance rules have moved to the rubocop-performance gem.
 
 # buggy: https://github.com/bbatsov/rubocop/issues/2639
 Performance/RedundantMatch:
-  Enabled: false
-
-# We don't use CAPS just for constants.
-Style/MutableConstant:
-  Enabled: false
-
-# We'll .times.map all we want.
-Performance/TimesMap:
   Enabled: false
 
 # https://github.com/bbatsov/rubocop/issues/2676
 Performance/RedundantMerge:
   Enabled: false
 
+# We'll .times.map all we want.
+Performance/TimesMap:
+  Enabled: false
+
+## Style
+
+Style/CommentAnnotation:
+  Enabled: false
+
 # Bug with constants? https://phabricator.fb.com/P56108678
 Style/ConditionalAssignment:
+  Enabled: false
+
+Style/Documentation:
+  Enabled: false
+
+Style/Encoding:
   Enabled: false
 
 # No more 'Missing frozen string literal comment.' linting violations
 Style/FrozenStringLiteralComment:
   Enabled: false
 
+# While this can be nice, it also can promote errors. Let people
+# use what's comfortable for them
+Style/GuardClause:
+  Enabled: false
+
+# less readable, not more
+Style/IfUnlessModifier:
+  Enabled: false
+
+# backslash is extra dumb in ruby, we want the OPPOSITE of this rule
+Style/LineEndConcatenation:
+  Enabled: false
+
+Style/MultilineTernaryOperator:
+  Enabled: false
+
+# We don't use CAPS just for constants.
+Style/MutableConstant:
+  Enabled: false
+
+# So just keep iterating instead of breaking? wtf.
+Style/Next:
+  Enabled: false
+
+Style/NumericLiterals:
+  Enabled: false
+
+# this isn't testing for consistency it always wants %w() which is dumb
+Style/PercentLiteralDelimiters:
+  Enabled: false
+
+# Really?
+Style/PerlBackrefs:
+  Enabled: false
+
+Style/RedundantReturn:
+  Enabled: false
+
+Style/RedundantSelf:
+  Enabled: false
+
+Style/WordArray:
+  Enabled: false
+
+
 #
 # Modified rules
 #
-LineLength:
-  Max: 120
 
-DotPosition:
+Layout/DotPosition:
   EnforcedStyle: trailing
 
-HashSyntax:
-  EnforcedStyle: hash_rockets
-
-Style/Documentation:
-  Enabled: false
-
-TrailingCommaInArrayLiteral:
-  EnforcedStyleForMultiline: comma
-
-TrailingCommaInHashLiteral:
-  EnforcedStyleForMultiline: comma
-
-TrailingCommaInArguments:
-  EnforcedStyleForMultiline: comma
-
-Layout/IndentArray:
+Layout/FirstArrayElementIndentation:
   EnforcedStyle: consistent
+
+Layout/LineLength:
+  Max: 120
+
+Metrics/BlockLength:
+  Max: 80
+
+Style/HashSyntax:
+  EnforcedStyle: hash_rockets
 
 Style/SignalException:
   EnforcedStyle: semantic
 
-Metrics/BlockLength:
-  Max: 80
+Style/TrailingCommaInArguments:
+  EnforcedStyleForMultiline: comma
+
+Style/TrailingCommaInArrayLiteral:
+  EnforcedStyleForMultiline: comma
+
+Style/TrailingCommaInHashLiteral:
+  EnforcedStyleForMultiline: comma
