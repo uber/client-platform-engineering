@@ -2,12 +2,6 @@ cpe_shims Cookbook
 ========================
 Installs and managed shims for the purpose of extending small binaries
 
-This cookbook depends on the following cookbook:
-
-* cpe_utils
-
-These cookbooks are offered by Facebook in the [IT-CPE](https://github.com/facebook/IT-CPE) repository.
-
 Attributes
 ----------
 * node['cpe_shims']
