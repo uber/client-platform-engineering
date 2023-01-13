@@ -2,13 +2,7 @@ uber_helpers Cookbook
 ==================
 This cookbook is where we keep all the common function / classes for use with chef.
 
-This cookbook depends on the following cookbook:
-
-* [cpe_utils](https://github.com/facebook/IT-CPE/tree/master/chef/cookbooks/cpe_utils)
-
-This cookbook is offered by Facebook in the [IT-CPE](https://github.com/facebook/IT-CPE) repository.
-
-This cookbook also depends on the following tools
+This cookbook depends on the following tools
 
 * [gnes](https://github.com/erikng/gnes)
 
