@@ -56,31 +56,44 @@ action_class do # rubocop:disable Metrics/BlockLength
     # Download the anyconnect pkg
     download_package(pkg)
 
-    # Install the pacakge with the ChoiceChangesXML
+    # Install the package with the ChoiceChangesXML
     cc_xml_path = ::File.join(anyconnect_root_cache_path, 'pkg', 'ChoiceChanges.xml')
     allow_downgrade = pkg['allow_downgrade']
     if allow_downgrade
-      if node.os_at_least?('12.0') && node.sext_profile_removal_contains_extension?(
+      if node.big_sur?
+        Chef::Log.warn('cpe_anyconnect - Big Sur has a bug that triggers UI popups that the user must accept if '\
+          'attempting to downgrade - you must manually uninstall the application.')
+        Chef::Log.warn('cpe_anyconnect - forcing downgrade to false')
+        allow_downgrade = false
+      elsif (node.os_at_least?('12.0') && node.sext_profile_removal_contains_extension?(
         'com.cisco.anyconnect.macos.acsockext', 'DE8Y96K9QP', node['cpe_anyconnect']['profile_identifier']
-      )
+      )) || node.os_less_than?('11.0')
         execute '/opt/cisco/anyconnect/bin/anyconnect_uninstall.sh' do
-          not_if { node.macos_package_installed?(pkg['receipt'], pkg['version']) }
+          not_if { node.macos_installed_package_lower?(pkg['receipt'], pkg['version']) }
           not_if { anyconnect_vpn_connected? }
           only_if { ::File.exist?('/opt/cisco/anyconnect/bin/anyconnect_uninstall.sh') }
         end
         execute '/opt/cisco/anyconnect/bin/dart_uninstall.sh' do
-          not_if { node.macos_package_installed?(pkg['dart_receipt'], pkg['version']) }
+          not_if { node.macos_installed_package_lower?(pkg['dart_receipt'], pkg['version']) }
           not_if { anyconnect_vpn_connected? }
           only_if { ::File.exist?('/opt/cisco/anyconnect/bin/dart_uninstall.sh') }
         end
       else
         Chef::Log.warn('cpe_anyconnect - AnyConnect package has logic to fail if attempting to downgrade - you must '\
-          'manually uninstall the application first if you are not passing a system extension profile!')
+          'manually uninstall the application.')
         Chef::Log.warn('cpe_anyconnect - forcing downgrade to false')
         allow_downgrade = false
       end
     end
+    daemon_path = '/Library/LaunchDaemons/com.cisco.anyconnect.vpnagentd.plist'
+    execute 'Load Cisco Daemon' do
+      command "/bin/launchctl load -w #{daemon_path}"
+      only_if { ::File.exist?(daemon_path) }
+      action :nothing
+    end
 
+    # anyconnect's postinstall copies the xml file that defines which portals
+    # are available to users into place
     execute "/usr/sbin/installer -applyChoiceChangesXML #{cc_xml_path} -pkg #{pkg_path(pkg)} -target /" do
       # functionally equivalent to allow_downgrade false on cpe_remote_pkg
       if allow_downgrade
@@ -89,14 +102,15 @@ action_class do # rubocop:disable Metrics/BlockLength
         not_if { node.macos_min_package_installed?(pkg['receipt'], pkg['version']) }
       end
       not_if { anyconnect_vpn_connected? }
-      notifies :create, 'file[trigger_gui]', :immediately
+      notifies :run, 'execute[Load Cisco Daemon]', :before
+      notifies :create, 'file[trigger_gui_install]', :immediately
     end
 
     # We only want the UI to trigger upon the first install and upgrades.
     # In testing, their own postinstall script logic is very unreliable.
     # Touch the gui_keepalive path and then restart the agent will trigger the UI
     gui_la_label = node['cpe_anyconnect']['la_gui_identifier']
-    file 'trigger_gui' do
+    file 'trigger_gui_install' do
       action :nothing
       only_if { ::File.exist?("/Library/LaunchAgents/#{gui_la_label}.plist") }
       path '/opt/cisco/anyconnect/gui_keepalive'
@@ -156,25 +170,33 @@ action_class do # rubocop:disable Metrics/BlockLength
   end
 
   def macos_manage
-    # If the Anyconnect App goes missing, either by accident or abuse, trigger re-install
+    # If the Anyconnect App or Umbrella goes missing, either by accident or abuse, trigger re-install
     ac_receipt = pkg['receipt']
-    orgid = node['cpe_anyconnect']['organization_id']
-    unless ::Dir.exist?(node['cpe_anyconnect']['app_path'])
+
+    if (node.macos_package_present?(pkg['receipt']) && !::Dir.exist?(node['cpe_anyconnect']['app_path'])) || \
+      !node.macos_package_present?(pkg['umbrella_receipt'])
       execute "/usr/sbin/pkgutil --forget #{ac_receipt}" do
         not_if { shell_out("/usr/sbin/pkgutil --pkg-info #{ac_receipt}").error? }
       end
+
+      # Since we are triggering a re-installation, don't create additional popups by re-enabling the agents/daemons
+      return
     end
 
     # We only want the UI to trigger upon the first install and upgrades.
     # In testing, their own postinstall script logic is very unreliable.
     # Touch the gui_keepalive path and then restart the agent will trigger the UI
     gui_la_label = node['cpe_anyconnect']['la_gui_identifier']
-    file 'trigger_gui' do
+    file 'trigger_gui_manage' do
       action :nothing
       only_if { ::File.exist?("/Library/LaunchAgents/#{gui_la_label}.plist") }
       path '/opt/cisco/anyconnect/gui_keepalive'
       notifies :restart, "launchd[#{gui_la_label}]", :immediately
     end
+
+    Chef::Log.warn("node['cpe_anyconnect']['final_xml_path'] = #{node['cpe_anyconnect']['final_xml_path']}")
+    # Continously manage VPN portals. Changes aren't noticable in AnyConnect UI without restarting client
+    render_anyconnect_portals_template(node['cpe_anyconnect']['final_xml_path'])
 
     launchd gui_la_label do
       type 'agent'
@@ -186,50 +208,10 @@ action_class do # rubocop:disable Metrics/BlockLength
       action :enable
       label 'com.cisco.anyconnect.vpnagentd'
       only_if { ::File.exist?('/Library/LaunchDaemons/com.cisco.anyconnect.vpnagentd.plist') }
+      # If we are about to upgrade the installed version, don't trigger a UI prompt
+      not_if { node.macos_installed_package_lower?(pkg['receipt'], pkg['version']) }
       type 'daemon'
-      notifies :create, 'file[trigger_gui]', :immediately
-    end
-
-    # Disable VPN and trigger a re-enroll by deleting the data folder if the nslookup fails
-    # Backup logs before directory deletion option.
-    unless orgid.nil?
-      ruby_block 'backup beacon logs' do
-        block do
-          Chef::Log.info(
-            'Backup beacon /opt/cisco/anyconnect/umbrella/data/beacon-logs/ ' \
-            '- trigger re-enroll of anyconnect client',
-          )
-          require 'fileutils'
-          FileUtils.cp_r(
-            '/opt/cisco/anyconnect/umbrella/data/beacon-logs',
-            '/var/log',
-          )
-        end
-        action :nothing
-        only_if { node['cpe_anyconnect']['backup_logs'] }
-      end
-
-      directory '/opt/cisco/anyconnect/umbrella/data' do
-        action :nothing
-        notifies :disable, 'launchd[com.cisco.anyconnect.vpnagentd-manage]', :before
-        notifies :enable, 'launchd[com.cisco.anyconnect.vpnagentd-manage]', :immediately
-        recursive true
-      end
-
-      ruby_block 'Delete /opt/cisco/anyconnect/umbrella/data - trigger re-enroll of anyconnect client' do
-        block do
-          Chef::Log.info('Delete /opt/cisco/anyconnect/umbrella/data - trigger re-enroll of anyconnect client')
-        end
-        notifies :run, 'ruby_block[backup beacon logs]', :immediately
-        notifies :delete, 'directory[/opt/cisco/anyconnect/umbrella/data]', :immediately
-        not_if { nslookup(orgid) }
-        only_if { node.macos_min_package_installed?(ac_receipt, '4.9.06037') }
-        only_if { node.daemon_running?('com.cisco.anyconnect.vpnagentd') } # must be loaded to return nslookup data
-        only_if { Time.now.to_i - Time.at(node.macos_boottime).to_i >= 300 } # takes a bit to fully load on boot
-        only_if { Time.now.to_i - Time.at(node.macos_waketime).to_i >= 300 } # takes a bit to fully load upon wake
-        # anyconnect must be on for a few to fully activate nslookup, otherwise this could loop infinitely
-        only_if { node.macos_process_uptime('vpnagentd') >= 300 }
-      end
+      notifies :create, 'file[trigger_gui_manage]', :immediately
     end
   end
 
@@ -259,6 +241,11 @@ action_class do # rubocop:disable Metrics/BlockLength
       # Remove Icon for Cisco AnyConnect Secure Mobility Client
       remove_desktop_link
     end
+
+    Chef::Log.warn("node['cpe_anyconnect']['final_xml_path'] = #{node['cpe_anyconnect']['final_xml_path']}")
+
+    # Continously manage VPN portals. Changes aren't noticable in AnyConnect UI without restarting client
+    render_anyconnect_portals_template(node['cpe_anyconnect']['final_xml_path'])
   end
 
   def uninstall
@@ -273,12 +260,32 @@ action_class do # rubocop:disable Metrics/BlockLength
   end
 
   def macos_uninstall
-    execute '/opt/cisco/anyconnect/bin/anyconnect_uninstall.sh' do
-      only_if { ::File.exist?('/opt/cisco/anyconnect/bin/anyconnect_uninstall.sh') }
+    uninstall_script = node['cpe_anyconnect']['uninstall_script']
+    security_cmd = '/usr/bin/security authorizationdb write com.apple.system-extensions.admin'
+    app_path = '/Applications/Cisco/Cisco\ AnyConnect\ Socket\ Filter.app'
+
+    # got rid of detection. defaulting to this behavior for every uninstall
+    if ::File.exist?(uninstall_script)
+      execute 'prepare_anyconnect_for_uninstall' do
+        command <<-SCRIPT
+          #{security_cmd} allow 2>/dev/null
+          sleep 1
+          /bin/launchctl unload /Library/LaunchDaemons/com.cisco.anyconnect.vpnagentd.plist
+          sleep 1
+          #{app_path}/Contents/MacOS/Cisco\\ AnyConnect\\ Socket\\ Filter -deactivateExt
+        SCRIPT
+        only_if { node.get_sys_ext_authorizations_rule == 'authenticate-admin-nonshared' } if node.at_least_big_sur?
+      end
+
+      execute uninstall_script
+
+      execute '/opt/cisco/anyconnect/bin/dart_uninstall.sh' do
+        only_if { ::File.exist?('/opt/cisco/anyconnect/bin/dart_uninstall.sh') }
+      end
     end
 
-    execute '/opt/cisco/anyconnect/bin/dart_uninstall.sh' do
-      only_if { ::File.exist?('/opt/cisco/anyconnect/bin/dart_uninstall.sh') }
+    execute "#{security_cmd} authenticate-admin-nonshared 2>/dev/null" do
+      only_if { node.get_sys_ext_authorizations_rule == 'allow' }
     end
   end
 
@@ -350,14 +357,44 @@ action_class do # rubocop:disable Metrics/BlockLength
     end
   end
 
+  def render_anyconnect_portals_template(on_disk_xml)
+    par_dir = Pathname.new(on_disk_xml).dirname.to_s
+    directory par_dir do
+      group node['root_group']
+      owner root_owner
+      mode '0755'
+      recursive true
+    end
+
+    template on_disk_xml do
+      cookbook node['cpe_anyconnect']['cookbook']['cookbook_name']
+      source node['cpe_anyconnect']['cookbook']['template_source']
+      group node['root_group']
+      owner root_owner
+      mode '0755'
+      variables(
+        :host_entries => node['cpe_anyconnect']['vpn_portals'],
+      )
+      not_if on_disk_xml.nil?
+      not_if node['cpe_anyconnect']['vpn_portals'].nil?
+      not_if node['cpe_anyconnect']['cookbook']['cookbook_name'].nil?
+      not_if node['cpe_anyconnect']['cookbook']['template_source'].nil?
+    end
+  end
+
   def sync_anyconnect_cache
     # Sync the entire anyconnect folder to handle any files an admin would need
+    # files/default/anyconnect/profiles/vpn/UberCertPush_client_profile.xml is written to disk
+    # by remote_directory for configuring portals. This file is then utilized by AnyConnect's
+    # postinstall during installation to configure portals.
     remote_directory anyconnect_root_cache_path do
       group node['root_group']
       owner root_owner
       mode '0755'
       source 'anyconnect'
     end
+    # Save portal xml into chef cache. This will be picked up by AnyConnect postinstall
+    render_anyconnect_portals_template("#{anyconnect_root_cache_path}/profiles/vpn/UberCertPush_client_profile.xml")
   end
 
   def download_package(pkg)
@@ -383,9 +420,8 @@ action_class do # rubocop:disable Metrics/BlockLength
     # Either LocalServiceNoNetwork or LoclalServiceNoNetworkFirewall
     return nil unless windows?
 
-    cmd = "(Get-WMIObject Win32_Service -Filter \"Name='BFE'\")"
-    group = powershell_out("(#{cmd}.PathName).split(' ')[2]").stdout.to_s.chomp
-    group.empty? ? nil : group
+    group = ::Win32::Service.config_info('BFE').binary_path_name
+    group.nil? ? nil : group.split(/ /, 4)[2].chomp
   end
 
   def bfe_registry
@@ -463,39 +499,5 @@ action_class do # rubocop:disable Metrics/BlockLength
 
     status = powershell_out('(Get-Service vpnagent).status').stdout.to_s.chomp
     status.empty? ? nil : status
-  end
-
-  def nslookup(orgid)
-    count = 0
-    json_path = ::File.join(anyconnect_root_cache_path, 'cpe_anyconnect.json')
-    guard_successful = true
-    unless node.nslookup_txt_records('debug.opendns.com')['orgid'] == orgid
-      if ::File.exists?(json_path)
-        count = node.parse_json(json_path)['nslookup_failures'] + 1
-      else
-        count = 1
-      end
-    end
-
-    if count > node['cpe_anyconnect']['nslookup_failure_count_threshold']
-      count = 0
-      guard_successful = false
-    end
-
-    write_json(count, json_path)
-    return guard_successful
-  end
-
-  def write_json(count, json_path)
-    if count == 0
-      file json_path do
-        action :delete
-      end
-    else
-      file json_path do
-        action :create
-        content Chef::JSONCompat.to_json_pretty({ 'nslookup_failures' => count })
-      end
-    end
   end
 end

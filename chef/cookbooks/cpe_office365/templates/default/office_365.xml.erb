@@ -1,0 +1,42 @@
+<Configuration ID="11d34e4c-1fc8-4e3d-9f1b-8c3f71a36f60">
+<%- if node['cpe_office365']['install']%>
+  <Add OfficeClientEdition="<%=@office_client_edition.to_s%>" Channel="<%=@channel%>" MigrateArch="<%=@migrate_arch.to_s%>">
+    <Product ID="<%=@product_id%>">
+    <% if @match_os%>
+      <Language ID="MatchOS" />
+    <% end %>
+    <% if @match_previous_msi%>
+      <Language ID="MatchPreviousMSI" />
+    <% end %>
+    <% if @exclude%>
+      <% @excluded_apps.each do |apps| -%>
+      <ExcludeApp ID="<%= apps %>" />
+      <% end -%>
+    <% end %>
+    </Product>
+  </Add>
+  <Property Name="SharedComputerLicensing" Value="<%=@shared_computer_licensing.to_s%>" />
+  <Property Name="SCLCacheOverride" Value="<%=@scl_cache_override.to_s%>" />
+  <Property Name="AUTOACTIVATE" Value="<%=@auto_activate.to_s%>" />
+  <Property Name="FORCEAPPSHUTDOWN" Value="<%=@force_app_shutdown.to_s%>" />
+  <Property Name="DeviceBasedLicensing" Value="<%=@device_based_licensing.to_s%>" />
+  <Updates Enabled="<%=@updates_enabled.to_s%>" />
+<%- if @remove_msi.to_s%>
+  <RemoveMSI>
+  <%- if @ignored_products.any?%>
+    <% @ignored_products.each do |prod_id| -%>
+    <IgnoreProduct ID="<%= prod_id %>" />
+    <% end -%>
+  <%- end %>
+  </RemoveMSI>
+<%- end %>
+  <Display Level="<%=@display_level%>" AcceptEULA="<%=@accept_eula.to_s%>" />
+<%- elsif node.default['cpe_office365']['uninstall']%>
+  <Display Level="<%=@display_level%>" AcceptEULA="<%=@accept_eula.to_s%>" />
+  <Property Name="FORCEAPPSHUTDOWN" Value="<%=@force_app_shutdown.to_s%>" />
+  <Remove All="<%=@remove_all.to_s%>" />
+<%- if @remove_msi%>
+  <RemoveMSI />
+<%- end %>
+<%- end %>
+</Configuration>
