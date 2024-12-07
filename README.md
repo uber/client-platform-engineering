@@ -3,3 +3,4 @@ The Uber client-platform-engineering (Client Platform Engineering) repo contains
 
 Some examples:
 - Chef Cookbooks
+- osquery extensions
