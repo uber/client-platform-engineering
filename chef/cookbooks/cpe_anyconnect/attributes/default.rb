@@ -25,8 +25,6 @@ default['cpe_anyconnect'] = {
       'version' => nil,
     },
   ],
-  'backup_logs' => false,
-  'nslookup_failure_count_threshold' => 20,
   'organization_id' => nil,
   'pkg' => {
     'allow_downgrade' => false,
@@ -46,4 +44,8 @@ when 'mac_os_x'
     '/Applications/Cisco/Cisco AnyConnect Secure Mobility Client.app'
   default['cpe_anyconnect']['pkg']['dart_receipt'] = 'com.cisco.pkg.anyconnect.dart'
   default['cpe_anyconnect']['pkg']['receipt'] = 'com.cisco.pkg.anyconnect.vpn'
+  default['cpe_anyconnect']['pkg']['umbrella_receipt'] = 'com.cisco.pkg.anyconnect.umbrella'
+  default['cpe_anyconnect']['cookbook']['cookbook_name'] = nil
+  default['cpe_anyconnect']['cookbook']['template_source'] = nil
+  default['cpe_anyconnect']['final_xml_path'] = nil
 end

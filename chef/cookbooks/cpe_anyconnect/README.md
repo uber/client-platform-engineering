@@ -27,8 +27,6 @@ Attributes
 * node['cpe_anyconnect']['modules']['version']
 * node['cpe_anyconnect']['modules']['checksum']
 * node['cpe_anyconnect']['modules']['install_args']
-* node['cpe_anyconnect']['backup_logs']
-* node['cpe_anyconnect']['nslookup_failure_count_threshold']
 * node['cpe_anyconnect']['organization_id']
 * node['cpe_anyconnect']['pkg']
 * node['cpe_anyconnect']['pkg']['allow_downgrade']
@@ -82,12 +80,3 @@ node.default['cpe_anyconnect']['modules'] = [
   },
 ]
 node.default['cpe_anyconnect']['desktop_shortcut'] = true
-```
-An example of setting the nslookup_failure_count_threshold other than default (macOS only)
-```
-node.default['cpe_anyconnect']['nslookup_failure_count_threshold'] = 5
-```
-An example of setting the attribute backup_logs to trigger a log backup before directory deletion (macOS only)
-```
-node.default['cpe_anyconnect']['backup_logs'] = true
-```

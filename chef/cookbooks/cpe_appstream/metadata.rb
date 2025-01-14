@@ -1,0 +1,10 @@
+name 'cpe_appstream'
+maintainer 'Uber Technologies, Inc.'
+maintainer_email 'noreply@uber.com'
+license 'All Rights Reserved'
+description 'AWS Appstream Image Automation'
+long_description 'Automates the Imagebuilder process for AWS Appstream Service'
+version '0.1.0'
+chef_version '>= 17.0'
+
+depends 'cpe_utils'
